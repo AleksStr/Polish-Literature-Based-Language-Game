@@ -27,7 +27,7 @@ jobs:
     
     - name: Download spaCy language model
       run: |
-        python -m spacy download pl_core_new_sm
+        python -m spacy download pl_core_news_sm
     
     - name: Run tests
       run: python -m unittest discover -s test
