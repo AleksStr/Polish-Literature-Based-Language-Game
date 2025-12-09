@@ -54,19 +54,19 @@ def generate_level(extract_path: str) -> List[Tuple[str, List[str]]]:
     return pages_and_words
 
 pages_data = generate_level("extracts/Zwierciadlana zagadka/Zwierciadlana zagadka_part_1.txt")
-
-for page, words in pages_data:
-    print("| NEXT PAGE |\n")
-    print(page)
-    print("\n")
-    
-    random_words = words[:] 
-    random.shuffle(random_words)
-    
-    correct_words = sorted(words)
-    
-    print("| Random Order|")
-    print(", ".join(random_words))
-    
-    print("\n| Corect Order |")
-    print(", ".join(correct_words))
+if __name__=="__main__":
+    for page, words in pages_data:
+        print("| NEXT PAGE |\n")
+        print(page)
+        print("\n")
+        
+        random_words = words[:] 
+        random.shuffle(random_words)
+        
+        correct_words = sorted(words)
+        
+        print("| Random Order|")
+        print(", ".join(random_words))
+        
+        print("\n| Corect Order |")
+        print(", ".join(correct_words))

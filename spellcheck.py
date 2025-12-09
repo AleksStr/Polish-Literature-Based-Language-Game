@@ -180,20 +180,20 @@ def generate_level(extract_path: str) -> List[Tuple[str, List[Tuple[str, str]]]]
         count += 1
         
     return pages_and_words
+if __name__=="__main__":
+    extract_file_path = "extracts/Zwierciadlana zagadka/Zwierciadlana zagadka_part_1.txt"
+    pages_data = generate_level(extract_file_path)
 
-extract_file_path = "extracts/Zwierciadlana zagadka/Zwierciadlana zagadka_part_1.txt"
-pages_data = generate_level(extract_file_path)
-
-for page, riddle_data in pages_data:
-    print("| NEXT PAGE |\n")
-    print(page)
-    print("\n")
-    
-    if not riddle_data:
-        continue
+    for page, riddle_data in pages_data:
+        print("| NEXT PAGE |\n")
+        print(page)
+        print("\n")
         
-    print("| Solutions |")
-    
-    for correct, typo in riddle_data:
-        print(f"Typo: {typo} | Correct: **{correct}**")
-    
+        if not riddle_data:
+            continue
+            
+        print("| Solutions |")
+        
+        for correct, typo in riddle_data:
+            print(f"Typo: {typo} | Correct: {correct}")
+        

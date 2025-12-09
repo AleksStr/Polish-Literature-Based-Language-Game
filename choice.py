@@ -1,4 +1,4 @@
-from helpers import read_page, get_token_info
+from helpers import read_page
 import random
 import spacy
 from typing import List, Tuple, Dict, Any
@@ -7,6 +7,25 @@ MIN_WORDS = 3
 MAX_WORDS = 8
 COLOR_START = "\033[91m"
 COLOR_RESET = "\033[0m"
+try:
+    NLP = spacy.load("pl_core_news_sm")
+except OSError:
+    spacy.cli.download("pl_core_news_sm")
+    NLP = spacy.load("pl_core_news_sm")
+
+def get_token_info(text: str) -> List[Dict[str, Any]]:
+    doc = NLP(text) 
+    word_tokens = []
+    for token in doc:
+        if not token.is_punct and not token.is_space and token.text.strip():
+            word_tokens.append({
+                'text': token.text,
+                'start': token.idx,
+                'end': token.idx + len(token.text),
+                'pos': token.pos_, 
+                'morph': token.morph
+            })
+    return word_tokens
 
 def find_same_form_candidates(word_token: Dict[str, Any], all_tokens: List[Dict[str, Any]]) -> List[str]:
     correct_pos = word_token["pos"]
@@ -106,14 +125,15 @@ def generate_level(path: str):
         count += 1
     return pages_output
 
-pages_data = generate_level("extracts/Zwierciadlana zagadka/Zwierciadlana zagadka_part_1.txt")
+if __name__ == "__main__":
+    pages_data = generate_level("extracts/Zwierciadlana zagadka/Zwierciadlana zagadka_part_1.txt")
 
-for masked_page, masked_tokens, options in pages_data:
-    print("| NEXT PAGE |\n")
-    print(masked_page)
-    print("\n| OPTIONS |")
-    for tok in masked_tokens:
-        w = tok["text"]
-        print(f"{w}: {', '.join(options[w])}")
-    print("\n")
+    for masked_page, masked_tokens, options in pages_data:
+        print("| NEXT PAGE |\n")
+        print(masked_page)
+        print("\n| OPTIONS |")
+        for tok in masked_tokens:
+            w = tok["text"]
+            print(f"{w}: {', '.join(options[w])}")
+        print("\n")
 

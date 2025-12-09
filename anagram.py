@@ -10,12 +10,20 @@ COLOR_RESET = "\033[0m"
 
 
 def get_anagram(word: str) -> str:
+    if len(word) <= 1:
+        return word
+    
     original_letters = list(word)
     shuffled_letters = original_letters[:]
     anagram = word
-    while anagram == word:
+    
+    max_attempts = 100  
+    attempts = 0
+    
+    while anagram == word and attempts < max_attempts:
         random.shuffle(shuffled_letters)
-        anagram = "".join(shuffled_letters)        
+        anagram = "".join(shuffled_letters)
+        attempts += 1
     
     return anagram
 
@@ -79,14 +87,14 @@ def generate_level(extract_path: str) -> List[Tuple[str, List[str]]]:
         pages_and_words.append((anagrammed_page, masked_words))
         count += 1
     return pages_and_words
+if __name__=="__main__":
+    pages_data = generate_level("extracts/Zwierciadlana zagadka/Zwierciadlana zagadka_part_1.txt")
 
-pages_data = generate_level("extracts/Zwierciadlana zagadka/Zwierciadlana zagadka_part_1.txt")
-
-for page, words in pages_data:
-    print("\n| Next Page |\n")
-    print(page)
-    print("\n")
-    
-    print("| Solution |\n")
-    print(", ".join(words))
+    for page, words in pages_data:
+        print("\n| Next Page |\n")
+        print(page)
+        print("\n")
+        
+        print("| Solution |\n")
+        print(", ".join(words))
     

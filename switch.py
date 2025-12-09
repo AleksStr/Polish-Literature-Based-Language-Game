@@ -1,5 +1,7 @@
+from helpers import read_page, get_token_info
 import random
-from helpers import read_page
+import spacy
+from typing import List, Tuple, Dict, Any
 
 MIN_PAIRS = 3
 MAX_PAIRS = 6
@@ -71,9 +73,9 @@ def generate_level(extract_path):
         pages.append(generate_riddle(read_page(extract_path, count)))
         count += 1
     return pages
-
-pages = generate_level("extracts/Zwierciadlana zagadka/Zwierciadlana zagadka_part_1.txt")
-for page in pages:
-    print("| NEXT PAGE |\n")
-    print(page)
-    print("\n")
+if __name__ == "__main__":
+    pages = generate_level("extracts/Zwierciadlana zagadka/Zwierciadlana zagadka_part_1.txt")
+    for page in pages:
+        print("| NEXT PAGE |\n")
+        print(page)
+        print("\n")

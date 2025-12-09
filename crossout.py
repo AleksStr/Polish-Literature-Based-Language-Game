@@ -58,9 +58,9 @@ def generate_level(extract_path):
         pages.append(generate_riddle(read_page(extract_path, count), extract_path))
         count += 1
     return pages
-
-pages = generate_level("extracts/Zwierciadlana zagadka/Zwierciadlana zagadka_part_1.txt")
-for page in pages:
-    print("| NEXT PAGE |\n")
-    print(page)
-    print("\n")
+if __name__ == "__main__":
+    pages = generate_level("extracts/Zwierciadlana zagadka/Zwierciadlana zagadka_part_1.txt")
+    for page in pages:
+        print("| NEXT PAGE |\n")
+        print(page)
+        print("\n")
