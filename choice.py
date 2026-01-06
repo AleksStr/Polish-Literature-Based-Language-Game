@@ -3,6 +3,7 @@ import random
 import spacy
 from word_token_detailed import Word_Token_Detailed
 from typing import List, Tuple, Dict, Any
+import uuid
 
 MIN_WORDS = 3
 MAX_WORDS = 8
@@ -109,6 +110,74 @@ def generate_level(path: str):
         pages_output.append((masked_page, masked_tokens, options))
         count += 1
     return pages_output
+
+def transform_to_choice_model(page_text: str, all_tokens: List, masked_indices: set) -> Dict[str, Any]:
+    parts = []
+    gaps = []
+    last_idx = 0
+    
+    sorted_tokens = sorted(all_tokens, key=lambda x: x.start)
+    
+    for i, tok in enumerate(sorted_tokens):
+        if tok.start > last_idx:
+            parts.append({
+                "type": "text",
+                "value": page_text[last_idx:tok.start]
+            })
+            
+        if i in masked_indices:
+            gap_id = str(uuid.uuid4())
+            parts.append({
+                "type": "gap",
+                "gapId": gap_id
+            })
+            
+            correct_val = tok.display_word
+            candidates = find_same_form_candidates(tok, sorted_tokens)
+            fillers = [t.display_word for t in sorted_tokens if t.display_word != correct_val]
+            
+            wrong = random.sample(candidates, min(len(candidates), 2))
+            if len(wrong) < 2:
+                extra = random.sample(fillers, 2 - len(wrong))
+                wrong.extend(extra)
+            
+            options_list = []
+            correct_option_id = ""
+            
+            all_choice_texts = [correct_val] + wrong
+            random.shuffle(all_choice_texts)
+            
+            for text in all_choice_texts:
+                opt_id = str(uuid.uuid4())
+                options_list.append({"id": opt_id, "label": text})
+                if text == correct_val:
+                    correct_option_id = opt_id
+            
+            gaps.append({
+                "id": gap_id,
+                "correctOptionId": correct_option_id,
+                "options": options_list
+            })
+        else:
+            parts.append({
+                "type": "text",
+                "value": tok.original_text
+            })
+            
+        last_idx = tok.finish
+
+    if last_idx < len(page_text):
+        parts.append({
+            "type": "text",
+            "value": page_text[last_idx:]
+        })
+
+    return {
+        "id": str(uuid.uuid4()),
+        "parts": parts,
+        "gaps": gaps
+    }
+
 
 if __name__ == "__main__":
     pages_data = generate_level("extracts/Zwierciadlana zagadka/Zwierciadlana zagadka_part_1.txt")

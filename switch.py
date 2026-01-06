@@ -1,6 +1,7 @@
 from helpers import read_page, get_token_info, is_punctuation
 import random
 from typing import List, Tuple, Dict, Any
+import uuid
 ''' current version switches words WITH interpunction that is attached to them'''
 MIN_PAIRS = 3
 MAX_PAIRS = 6
@@ -96,6 +97,7 @@ def generate_level(extract_path):
         pages.append(generate_riddle(read_page(extract_path, count)))
         count += 1
     return pages
+
 
 
 if __name__ == "__main__":

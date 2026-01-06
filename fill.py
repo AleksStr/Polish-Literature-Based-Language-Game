@@ -1,6 +1,7 @@
 from helpers import read_page, get_token_info2
 import random
 from typing import List, Tuple, Dict, Any
+import uuid
 
 MIN_WORDS = 3
 MAX_WORDS = 8
@@ -60,6 +61,55 @@ def generate_level(extract_path: str) -> List[Tuple[str, List[str]]]:
         pages_and_words.append((riddle_page, riddle_words))
         count += 1
     return pages_and_words
+
+def transform_to_fill_model(page_text: str, word_tokens: List, words_to_remove: List) -> Dict[str, Any]:
+    parts = []
+    options = []
+    
+    # Sort removals to process text linearly
+    words_to_remove.sort(key=lambda x: x.start)
+    
+    # Create the options pool (all correct words, shuffled)
+    all_options_pool = [w.display_word for w in words_to_remove]
+    random.shuffle(all_options_pool)
+    
+    # Map text labels to unique option IDs for the frontend
+    label_to_option_id = {}
+    for label in all_options_pool:
+        opt_id = str(uuid.uuid4())
+        label_to_option_id[label] = opt_id
+        options.append({"id": opt_id, "label": label})
+
+    last_idx = 0
+    for word in words_to_remove:
+        # Append text before the gap
+        if word.start > last_idx:
+            parts.append({
+                "type": "text",
+                "value": page_text[last_idx:word.start]
+            })
+        
+        # Append the gap
+        parts.append({
+            "type": "gap",
+            "value": "" # Front-end fills this; matching the interface
+        })
+        last_idx = word.finish
+
+    # Append remaining text
+    if last_idx < len(page_text):
+        parts.append({
+            "type": "text",
+            "value": page_text[last_idx:]
+        })
+
+    return {
+        "gameId": random.randint(1000, 9999),
+        "riddle": {
+            "prompt": {"parts": parts},
+            "options": options
+        }
+    }
 
 
 if __name__=="__main__":

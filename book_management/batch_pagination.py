@@ -1,5 +1,5 @@
 import os
-import pages_divider
+import book_management.pages_divider as pages_divider
 
 def process_all_books(base_dir="books"):
     

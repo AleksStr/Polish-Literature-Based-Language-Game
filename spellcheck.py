@@ -2,6 +2,7 @@ from helpers import read_page, get_token_info2
 import random
 import spacy
 from typing import List, Tuple, Dict, Any, Set, Optional
+import uuid
 
 
 MIN_WORDS = 3
@@ -144,6 +145,32 @@ def generate_level(extract_path: str) -> List[Tuple[str, List[Tuple[str, str]]]]
         count += 1
         
     return pages_and_words
+
+def transform_to_spellcheck_model(page_text: str, all_tokens: List, typos_data: List[Tuple[str, str, int]]) -> Dict[str, Any]:
+
+    typo_map = {start: typo for _, typo, start in typos_data}
+    
+    words_list = []
+    for token in all_tokens:
+        word_value = token.original_text
+        
+        if token.start in typo_map:
+            word_value = typo_map[token.start]
+            
+        words_list.append({
+            "id": str(uuid.uuid4()),
+            "value": word_value
+        })
+        
+    return {
+        "gameId": random.randint(1000, 9999),
+        "riddle": {
+            "prompt": {
+                "words": words_list
+            }
+        }
+    }
+
 if __name__=="__main__":
     extract_file_path = "extracts/Zwierciadlana zagadka/Zwierciadlana zagadka_part_1.txt"
     pages_data = generate_level(extract_file_path)

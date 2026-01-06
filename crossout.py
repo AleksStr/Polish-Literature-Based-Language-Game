@@ -1,6 +1,8 @@
 import random
 import os
 from helpers import read_page
+import uuid
+
 MIN_EXTRA_LINES = 2
 MAX_EXTRA_LINES = 5
 COLOR_START = "\033[91m"
@@ -64,6 +66,29 @@ def generate_level(extract_path):
         pages.append(generate_riddle(read_page(extract_path, count), extract_path))
         count += 1
     return pages
+
+def transform_to_crossout_model(riddle_text):
+
+    raw_lines = riddle_text.split("\n")
+    
+    line_objects = []
+    for line in raw_lines:
+        if not line.strip():
+            continue
+            
+        clean_line = line.replace(COLOR_START, "").replace(COLOR_RESET, "")
+        
+        line_objects.append({
+            "id": str(uuid.uuid4()),
+            "text": clean_line
+        })
+
+    return {
+        "gameId": random.randint(1000, 9999),
+        "riddle": {
+            "lines": line_objects
+        }
+    }
 
 
 if __name__ == "__main__":

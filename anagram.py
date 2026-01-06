@@ -3,6 +3,7 @@ import random
 import spacy
 from word_token import Word_Token
 from typing import List, Tuple, Dict, Any
+import uuid
 
 MIN_WORDS = 3
 MAX_WORDS = 8
@@ -87,6 +88,29 @@ def generate_level(extract_path: str):
         count += 1
     return pages, words
 
+def transform_to_model(all_tokens: List, masked_metadata: List) -> Dict[str, Any]:
+    masked_indices = {idx for idx, info in masked_metadata}
+    
+    words_list = []
+    for i, token in enumerate(all_tokens):
+        value = token.original_text
+        if i in masked_indices:
+            value = get_anagram(value)
+            
+        words_list.append({
+            "id": str(uuid.uuid4()),
+            "value": value
+        })
+        
+    return {
+        "gameId": random.randint(1, 10000),
+        "riddle": {
+            "prompt": {
+                "words": words_list
+            }
+        }
+    }
+
 if __name__ == "__main__":
     pages, words = generate_level("extracts/Zwierciadlana zagadka/Zwierciadlana zagadka_part_1.txt")
     
@@ -99,4 +123,4 @@ if __name__ == "__main__":
         
         print("| Solution |\n")
         print(", ".join(display_texts))
-    
+
