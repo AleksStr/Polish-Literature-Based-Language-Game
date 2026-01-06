@@ -66,14 +66,11 @@ def transform_to_fill_model(page_text: str, word_tokens: List, words_to_remove: 
     parts = []
     options = []
     
-    # Sort removals to process text linearly
     words_to_remove.sort(key=lambda x: x.start)
     
-    # Create the options pool (all correct words, shuffled)
     all_options_pool = [w.display_word for w in words_to_remove]
     random.shuffle(all_options_pool)
-    
-    # Map text labels to unique option IDs for the frontend
+
     label_to_option_id = {}
     for label in all_options_pool:
         opt_id = str(uuid.uuid4())
@@ -82,21 +79,18 @@ def transform_to_fill_model(page_text: str, word_tokens: List, words_to_remove: 
 
     last_idx = 0
     for word in words_to_remove:
-        # Append text before the gap
         if word.start > last_idx:
             parts.append({
                 "type": "text",
                 "value": page_text[last_idx:word.start]
             })
         
-        # Append the gap
         parts.append({
             "type": "gap",
-            "value": "" # Front-end fills this; matching the interface
+            "value": "" 
         })
         last_idx = word.finish
 
-    # Append remaining text
     if last_idx < len(page_text):
         parts.append({
             "type": "text",
