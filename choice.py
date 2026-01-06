@@ -1,68 +1,52 @@
-from helpers import read_page
+from helpers import read_page, get_token_info
 import random
 import spacy
+from word_token_detailed import Word_Token_Detailed
 from typing import List, Tuple, Dict, Any
 
 MIN_WORDS = 3
 MAX_WORDS = 8
 COLOR_START = "\033[91m"
 COLOR_RESET = "\033[0m"
-try:
-    NLP = spacy.load("pl_core_news_sm")
-except OSError:
-    spacy.cli.download("pl_core_news_sm")
-    NLP = spacy.load("pl_core_news_sm")
-
-def get_token_info(text: str) -> List[Dict[str, Any]]:
-    doc = NLP(text) 
-    word_tokens = []
-    for token in doc:
-        if not token.is_punct and not token.is_space and token.text.strip():
-            word_tokens.append({
-                'text': token.text,
-                'start': token.idx,
-                'end': token.idx + len(token.text),
-                'pos': token.pos_, 
-                'morph': token.morph
-            })
-    return word_tokens
 
 def find_same_form_candidates(word_token: Dict[str, Any], all_tokens: List[Dict[str, Any]]) -> List[str]:
-    correct_pos = word_token["pos"]
-    correct_morph = word_token["morph"].to_dict()
+    correct_pos = word_token.pos
+    correct_morph = word_token.morph.to_dict()
     candidates = []
 
     for tok in all_tokens:
-        if tok["text"] == word_token["text"]:
+        if tok.display_word == word_token.display_word:
             continue
-        if tok["pos"] != correct_pos:
+        if tok.pos != correct_pos:
+            continue
+        if tok.display_word in candidates:
             continue
 
-        tok_morph = tok["morph"].to_dict()
+        tok_morph = tok.morph.to_dict()
 
         if correct_pos == "NOUN":
             if tok_morph.get("Case") == correct_morph.get("Case") and tok_morph.get("Number") == correct_morph.get("Number"):
-                candidates.append(tok["text"])
+                candidates.append(tok.display_word)
                 continue
 
         elif correct_pos == "VERB":
             features = ["Mood", "Tense", "Person", "Number", "Aspect"]
             shared = sum(1 for f in features if tok_morph.get(f) == correct_morph.get(f))
             if shared >= 2:
-                candidates.append(tok["text"])
+                candidates.append(tok.display_word)
                 continue
 
         elif correct_pos == "ADJ":
             if tok_morph.get("Case") == correct_morph.get("Case") and tok_morph.get("Number") == correct_morph.get("Number") and tok_morph.get("Gender") == correct_morph.get("Gender"):
-                candidates.append(tok["text"])
+                candidates.append(tok.display_word)
                 continue
 
         elif correct_pos == "ADV":
-            candidates.append(tok["text"])
+            candidates.append(tok.display_word)
             continue
 
         else:
-            candidates.append(tok["text"])
+            candidates.append(tok.display_word)
 
     return list(set(candidates))
 
@@ -80,10 +64,11 @@ def generate_riddle(page: str) -> Tuple[str, List[Dict[str, Any]]]:
 
     for idx in chosen_indices:
         tok = word_tokens[idx]
-        replacements.append((tok["start"], tok["end"], f"{COLOR_START}[x]{COLOR_RESET}"))
+        replacements.append((tok.start, tok.finish, f"{COLOR_START}[x]{COLOR_RESET}"))
         masked_tokens.append(tok)
 
     replacements.sort(key=lambda x: x[0], reverse=True)
+    masked_tokens.sort(key=lambda x: x.start)
     masked_page = page
     for start, end, repl in replacements:
         masked_page = masked_page[:start] + repl + masked_page[end:]
@@ -93,10 +78,10 @@ def generate_riddle(page: str) -> Tuple[str, List[Dict[str, Any]]]:
 def generate_options_for_masked(masked_tokens: List[Dict[str, Any]], all_tokens: List[Dict[str, Any]]):
     out = {}
     for tok in masked_tokens:
-        correct = tok["text"]
+        correct = tok.display_word
         candidates = find_same_form_candidates(tok, all_tokens)
 
-        fillers = [t["text"] for t in all_tokens if t["text"] != correct]
+        fillers = [t.display_word for t in all_tokens if t.display_word != correct]
 
         if len(candidates) < 2:
             wrong = random.sample(fillers, 2)
@@ -133,7 +118,7 @@ if __name__ == "__main__":
         print(masked_page)
         print("\n| OPTIONS |")
         for tok in masked_tokens:
-            w = tok["text"]
+            w = tok.display_word
             print(f"{w}: {', '.join(options[w])}")
         print("\n")
 

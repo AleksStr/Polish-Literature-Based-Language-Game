@@ -1,50 +1,14 @@
-from helpers import read_page, get_token_info
+from helpers import read_page, get_token_info2
 import random
 import spacy
 from typing import List, Tuple, Dict, Any, Set, Optional
+
 
 MIN_WORDS = 3
 MAX_WORDS = 8
 COLOR_START = "\033[91m"
 COLOR_RESET = "\033[0m"
 MIN_WORD_LENGTH_FOR_TYPO = 5
-
-try:
-    NLP = spacy.load("pl_core_news_sm")
-except OSError:
-    spacy.cli.download("pl_core_news_sm")
-    NLP = spacy.load("pl_core_news_sm")
-
-WORD_FEATURE_MAP: Dict[str, Set[str]] = {}
-PAGE_CONTENT_CACHE: Dict[str, str] = {}
-
-
-def collect_word_features(extract_path: str):
-    global WORD_FEATURE_MAP
-    global PAGE_CONTENT_CACHE
-    count = 1
-    all_text = ""
-    
-    while True:
-        page_content = read_page(extract_path, count)
-        if not page_content:
-            break
-        all_text += page_content + " "
-        PAGE_CONTENT_CACHE[str(count)] = page_content
-        count += 1
-        
-    doc = NLP(all_text)
-    
-    for token in doc:
-        if not token.is_punct and not token.is_space and token.text.strip():
-            features = str(token.morph)
-            
-            if features:
-                if features not in WORD_FEATURE_MAP:
-                    WORD_FEATURE_MAP[features] = set()
-                WORD_FEATURE_MAP[features].add(token.text)
-
-
 
 def swap_adjacent_letters(word: str) -> str:
     word = list(word)
@@ -122,9 +86,9 @@ def generate_typo_distractor(correct_word: str) -> str:
 
 
 def generate_riddle(page: str) -> Tuple[str, List[Tuple[str, str]]]:
-    word_tokens = get_token_info(page) 
+    word_tokens = get_token_info2(page) 
     
-    maskable_tokens = [t for t in word_tokens if len(t['text']) >= MIN_WORD_LENGTH_FOR_TYPO]
+    maskable_tokens = [t for t in word_tokens if len(t.original_text) >= MIN_WORD_LENGTH_FOR_TYPO]
     
     riddle_words_data: List[Tuple[str, str]] = []
     
@@ -139,23 +103,25 @@ def generate_riddle(page: str) -> Tuple[str, List[Tuple[str, str]]]:
     replacements = [] 
     
     for token_info in tokens_to_mask:
-        correct_word = token_info['text']
-        
+        correct_word = token_info.original_text
+        if len(correct_word)<2:
+            continue
         typo_to_insert = generate_typo_distractor(correct_word)
         
         while typo_to_insert == correct_word:
             typo_to_insert = generate_typo_distractor(correct_word)
         
-        riddle_words_data.append((correct_word, typo_to_insert))
         
-        start = token_info['start']
-        end = token_info['end']
+        start = token_info.start
+        end = token_info.finish
+        riddle_words_data.append((correct_word, typo_to_insert, start))
         
         replacement = f"{COLOR_START}{typo_to_insert}{COLOR_RESET}"
         replacements.append((start, end, replacement))
 
     replacements.sort(key=lambda x: x[0], reverse=True)
-    
+    riddle_words_data.sort(key=lambda x: x[2])
+    riddle_words_data = [(original, typo) for original, typo, _ in riddle_words_data]
     masked_page = page
     
     for start, end, replacement in replacements:
@@ -168,10 +134,8 @@ def generate_level(extract_path: str) -> List[Tuple[str, List[Tuple[str, str]]]]
     pages_and_words = []
     count = 1
     
-    collect_word_features(extract_path)
-    
     while True:
-        page_content = PAGE_CONTENT_CACHE.get(str(count))
+        page_content = read_page(extract_path, count)
         if not page_content:
             break
         

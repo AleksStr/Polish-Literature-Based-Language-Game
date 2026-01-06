@@ -2,7 +2,7 @@ from book import Book
 import os
 import shutil
 
-book_path = "w-pustyni-i-w-puszczy.txt"
+book_path = "pan-tadeusz.txt"
 
 def read_generic_info(current_book):
     author = current_book.readline().strip()

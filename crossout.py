@@ -6,19 +6,23 @@ MAX_EXTRA_LINES = 5
 COLOR_START = "\033[91m"
 COLOR_RESET = "\033[0m"
 
+def check_if_allowed(extract_path):
+    folder = os.path.dirname(extract_path)
+    contents = os.listdir(folder)
+    if len(contents) == 1:
+        print(f"Only one item: {contents[0]}")
+        return 0
+    return 1
 
-# to do: handle one chapter books
-def put_extra_line(page, extra):
+def put_extra_line(page, extra):    
     lines = page.split("\n")
     if extra.strip() in page:
         print("Warning: This line exist on this page")
-        # handle this later
+        return page
     if lines and lines[-1] == '':
         lines.pop()
 
     extra_index = random.randint(0, len(lines))
-    
-    #lines.insert(extra_index, extra)
     colored_extra = COLOR_START + extra.strip() + COLOR_RESET
     
     lines.insert(extra_index, colored_extra)
@@ -42,6 +46,8 @@ def get_random_extract(extract_path):
     return os.path.join(folder, random_extract)
 
 def generate_riddle(page, extract_path):
+    if not check_if_allowed:
+        return 0
     extra_count = random.randint(MIN_EXTRA_LINES, MAX_EXTRA_LINES)
     riddle = page
     for i in range(0,extra_count):
@@ -58,6 +64,8 @@ def generate_level(extract_path):
         pages.append(generate_riddle(read_page(extract_path, count), extract_path))
         count += 1
     return pages
+
+
 if __name__ == "__main__":
     pages = generate_level("extracts/Zwierciadlana zagadka/Zwierciadlana zagadka_part_1.txt")
     for page in pages:
