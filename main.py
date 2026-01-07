@@ -1,8 +1,12 @@
+import os
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
-import fill_endpoint  
+import fill_endpoint
 
 app = FastAPI(title="Game API")
+
+
+port = int(os.environ.get("PORT", 8080))
 
 
 app.add_middleware(
@@ -18,12 +22,12 @@ app.include_router(fill_endpoint.router)
 
 @app.get("/")
 async def root():
-    return {"message": "Game API is running", "version": "1.0.0"}
+    return {"message": "Game API on Cloud Run", "status": "running"}
 
 @app.get("/health")
-async def health_check():
+async def health():
     return {"status": "healthy"}
 
 if __name__ == "__main__":
     import uvicorn
-    uvicorn.run(app, host="0.0.0.0", port=8000)
+    uvicorn.run(app, host="0.0.0.0", port=port)
