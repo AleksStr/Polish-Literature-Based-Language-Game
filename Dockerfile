@@ -9,11 +9,9 @@ RUN apt-get update && apt-get install -y \
 
 COPY requirements.txt .
 
-RUN pip install --no-cache-dir -r requirements.txt && \
-    python -m spacy download pl_core_news_sm
+RUN pip install --no-cache-dir -r requirements.txt
 
 COPY *.py ./
-COPY extracts/ ./extracts/
 
 EXPOSE 8080
 
