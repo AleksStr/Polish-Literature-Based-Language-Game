@@ -75,7 +75,7 @@ async def start_fill_gaps_game(request: GameRequest):
         
         word_tokens_data = get_token_info2(page_content)
         if not word_tokens_data:
-            raise HTTPException(status_code=500, detail="Failed to process text")
+            raise HTTPException(status_code=600, detail="Failed to process text")
         
         word_tokens = []
         for token in word_tokens_data:
