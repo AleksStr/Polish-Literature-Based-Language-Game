@@ -42,6 +42,8 @@ active_games_metadata: Dict[int, Dict[str, Any]] = {}
 
 @router.post("/crossout/start", response_model=List[CrossoutResponse])
 async def start_crossout_game(request: GameRequest):
+    if request.gameType != 'crossout':
+        raise HTTPException(status_code=400, detail="Invalid game type")
     try:
         extract_path = f"extracts/book_{request.bookId}/chapter_{request.chapter}.txt"
         all_pages_responses = []

@@ -1,8 +1,8 @@
-from book import Book
+from book_management.book import Book
 import os
 import shutil
 
-book_path = "pan-tadeusz.txt"
+book_path = "full_books/wesele.txt"
 
 def read_generic_info(current_book):
     author = current_book.readline().strip()

@@ -8,6 +8,8 @@ symbol_per_line = 60
 short_word_max_len = 2
 max_number_of_pages = 10
 
+current_chapter = 1
+
 def divide_text_into_lines(full_text, max_len=symbol_per_line):
     formatted_lines = []
     paragraphs = full_text.splitlines()
@@ -29,7 +31,6 @@ def divide_text_into_lines(full_text, max_len=symbol_per_line):
             proposed_len = len(proposed_line)
 
             if proposed_len <= max_len:
-                
                 is_current_word_short = len(word) <= short_word_max_len
                 next_word_index = i + 1
 
@@ -42,7 +43,6 @@ def divide_text_into_lines(full_text, max_len=symbol_per_line):
                         line_must_break = True
 
                 if line_must_break and is_current_word_short:
-                    
                     k = len(current_line_words) - 1
                     while k >= 0:
                         prev_word = current_line_words[k]
@@ -65,10 +65,8 @@ def divide_text_into_lines(full_text, max_len=symbol_per_line):
             
             else:
                 formatted_lines.append(" ".join(current_line_words))
-                
                 current_line_words = [word]
                 i += 1
-
 
         if current_line_words:
             formatted_lines.append(" ".join(current_line_words))
@@ -103,19 +101,16 @@ def paginate_lines(lines):
         if total_lines - start_index < prefered_lines_page:
             best_break_index = total_lines
         else:
-            
             for j in range(search_start, search_max_hard + 1):
-                
                 if is_sentence_end(lines[j - 1]):
                     best_break_index = j
-                    break 
+                    break
                 
                 if j == total_lines:
                     best_break_index = total_lines
                     break
         
             if not is_sentence_end(lines[best_break_index - 1]):
-                
                 for j in range(search_start - 1, search_min - 1, -1):
                     if is_sentence_end(lines[j - 1]):
                         best_break_index = j
@@ -123,7 +118,6 @@ def paginate_lines(lines):
         
         if not is_sentence_end(lines[best_break_index - 1]) and best_break_index != total_lines:
             best_break_index = search_max_hard
-
 
         page_content = lines[start_index:best_break_index]
         pages.append(page_content)
@@ -138,93 +132,82 @@ def paginate_lines(lines):
 
     return pages
 
-
-def process_chapter_file(book_path):
+def process_chapter_file(chapter_path, book_title=None):
+    global current_chapter
     
     try:
-        with open(book_path, 'r', encoding='utf-8') as current_book:
+        with open(chapter_path, 'r', encoding='utf-8') as current_book:
             full_text = current_book.read()
     except FileNotFoundError:
         return
 
+    if book_title is None:
+        book_title = os.path.basename(os.path.dirname(chapter_path))
+    
     formatted_lines = divide_text_into_lines(full_text)
     pages = paginate_lines(formatted_lines)
     total_pages = len(pages)
 
-    chapter_file = os.path.basename(book_path)
-    book_title = os.path.basename(os.path.dirname(book_path))
-    chapter_title_base = os.path.splitext(chapter_file)[0]
-
-    if total_pages > max_number_of_pages:
-        num_parts = math.ceil(total_pages / max_number_of_pages)
-        pages_per_part = math.ceil(total_pages / num_parts)
-    else:
-        num_parts = 1
-        pages_per_part = total_pages
-
     output_dir = os.path.join("extracts", book_title)
     os.makedirs(output_dir, exist_ok=True)
     
-    part_end_indices = []
+    if total_pages > max_number_of_pages:
+        num_chunks = math.ceil(total_pages / max_number_of_pages)
+        pages_per_chunk = math.ceil(total_pages / num_chunks)
+        
+        chunk_end_indices = []
+        
+        for chunk_index in range(num_chunks):
+            end_page_global_ideal = min((chunk_index + 1) * pages_per_chunk, total_pages)
+            end_page_global = end_page_global_ideal
+            
+            if end_page_global < total_pages:
+                last_page_index = end_page_global - 1
+                last_line_of_page = pages[last_page_index][-1]
+                
+                if not is_sentence_end(last_line_of_page):
+                    new_end_index = end_page_global
+                    while new_end_index < total_pages:
+                        next_page_index = new_end_index
+                        last_line_of_next_page = pages[next_page_index][-1]
+                        
+                        if is_sentence_end(last_line_of_next_page):
+                            end_page_global = new_end_index + 1
+                            break
+                        
+                        new_end_index += 1
+                    
+                    if new_end_index == total_pages:
+                        end_page_global = total_pages
+            
+            chunk_end_indices.append(end_page_global)
+    else:
+        num_chunks = 1
+        chunk_end_indices = [total_pages]
     
-    current_page = 0
-    for part_index in range(num_parts):
-        
-        end_page_global_ideal = min((part_index + 1) * pages_per_part, total_pages)
-        
-        end_page_global = end_page_global_ideal
-        
-        if end_page_global < total_pages:
-            last_page_index = end_page_global - 1
-            last_line_of_page = pages[last_page_index][-1]
-            
-            if not is_sentence_end(last_line_of_page):
-                
-                new_end_index = end_page_global
-                while new_end_index < total_pages:
-                    next_page_index = new_end_index
-                    last_line_of_next_page = pages[next_page_index][-1]
-                    
-                    if is_sentence_end(last_line_of_next_page):
-                        end_page_global = new_end_index + 1
-                        break
-                    
-                    new_end_index += 1
-                
-                if new_end_index == total_pages:
-                    end_page_global = total_pages
-            
-        part_end_indices.append(end_page_global)
-
     current_start = 0
-    for part_index in range(num_parts):
+    for chunk_index in range(num_chunks):
         start_page_global = current_start
-        end_page_global = part_end_indices[part_index]
-
-        part_pages = pages[start_page_global:end_page_global]
-
-        if num_parts > 1:
-            output_filename = f"{chapter_title_base}_part_{part_index + 1}.txt"
-        else:
-            output_filename = f"{chapter_title_base}.txt"
-
+        end_page_global = chunk_end_indices[chunk_index]
+        
+        chunk_pages = pages[start_page_global:end_page_global]
+        
+        output_filename = f"chapter_{current_chapter}.txt"
         output_path = os.path.join(output_dir, output_filename)
-
+        
         with open(output_path, 'w', encoding='utf-8') as f:
-            for i, page in enumerate(part_pages):
-
-                page_in_part = start_page_global + i + 1 
-
-                f.write(f"\n| Page {page_in_part} |\n\n")
-
+            for i, page in enumerate(chunk_pages):
+                page_in_chunk = i + 1
+                f.write(f"\n| Page {page_in_chunk} |\n\n")
                 for line in page:
                     f.write(f"{line.strip()}\n")
-
             f.write("\n")
         
+        current_chapter += 1
         current_start = end_page_global
-
 
 if __name__ == "__main__":
     book_path = "books/Zwierciadlana zagadka/Zwierciadlana zagadka.txt"
-    process_chapter_file(book_path)
+    book_title = os.path.basename(os.path.dirname(book_path))
+    current_chapter = 1
+    process_chapter_file(book_path, book_title)
