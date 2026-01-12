@@ -5,8 +5,12 @@ import uuid
 
 MIN_WORDS = 3
 MAX_WORDS = 8
+'''
 COLOR_START = "\033[91m"
 COLOR_RESET = "\033[0m"
+'''
+COLOR_START = ""
+COLOR_RESET = ""
 
 def pick_words_to_remove(word_tokens ,n):
     ''' picks random words that are different from each other'''

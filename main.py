@@ -3,7 +3,7 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 import fill_endpoint
 
-app = FastAPI(title="Game API")
+app = FastAPI()
 
 
 port = int(os.environ.get("PORT", 8080))
