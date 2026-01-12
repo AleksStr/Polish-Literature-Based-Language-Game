@@ -4,6 +4,7 @@ from fastapi.middleware.cors import CORSMiddleware
 import fill_endpoint
 import anagram_endpoint
 import choice_enpoint
+import spellcheck_enpoint
 
 app = FastAPI()
 
@@ -23,6 +24,7 @@ app.add_middleware(
 app.include_router(fill_endpoint.router)
 app.include_router(anagram_endpoint.router)
 app.include_router(choice_enpoint.router)
+app.include_router(spellcheck_enpoint.router)
 
 @app.get("/")
 async def root():
