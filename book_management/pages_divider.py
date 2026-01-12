@@ -1,9 +1,9 @@
 import os
 import math
 
-prefered_lines_page = 15
-max_lines_page = 20
-min_lines_page = 5
+prefered_lines_page = 4
+max_lines_page = 4
+min_lines_page = 4
 symbol_per_line = 60
 short_word_max_len = 2
 max_number_of_pages = 10
