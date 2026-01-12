@@ -7,9 +7,12 @@ import uuid
 
 MIN_WORDS = 3
 MAX_WORDS = 8
+'''
 COLOR_START = "\033[91m"
 COLOR_RESET = "\033[0m"
-
+'''
+COLOR_START = ""
+COLOR_RESET = ""
 
 def get_anagram(word: str) -> str:
     if len(word) <= 1:
