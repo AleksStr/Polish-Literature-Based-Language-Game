@@ -5,8 +5,12 @@ import uuid
 ''' current version switches words WITH interpunction that is attached to them'''
 MIN_PAIRS = 3
 MAX_PAIRS = 6
+'''
 COLOR_START = "\033[91m"
 COLOR_RESET = "\033[0m"
+'''
+COLOR_START = ""
+COLOR_RESET = ""
 
 def switch_word_riddle(page, swapped_word):
     # Main function to swap words in a random line
@@ -97,6 +101,42 @@ def generate_level(extract_path):
         pages.append(generate_riddle(read_page(extract_path, count)))
         count += 1
     return pages
+
+def transform_to_switch_model(page_content: str, word_tokens: List) -> Dict[str, Any]:
+    words_data = []
+    for t in word_tokens:
+        words_data.append({
+            "id": str(uuid.uuid4()),
+            "value": t.original_text,
+            "index": len(words_data)
+        })
+
+    num_swaps = random.randint(3,6)
+    swapped_ids = set()
+    
+    for _ in range(num_swaps):
+        valid_indices = []
+        for i in range(len(words_data) - 1):
+            w1, w2 = words_data[i], words_data[i+1]
+            if (w1["id"] not in swapped_ids and 
+                w2["id"] not in swapped_ids and
+                w1["value"].strip() and w2["value"].strip() and
+                not any(c in w1["value"] for c in ".,!?;:")):
+                valid_indices.append(i)
+        
+        if not valid_indices:
+            break
+            
+        idx = random.choice(valid_indices)
+        words_data[idx]["value"], words_data[idx+1]["value"] = words_data[idx+1]["value"], words_data[idx]["value"]
+        
+        swapped_ids.add(words_data[idx]["id"])
+        swapped_ids.add(words_data[idx+1]["id"])
+
+    return {
+        "words": [{"id": w["id"], "value": w["value"]} for w in words_data],
+        "swapped_ids": swapped_ids
+    }
 
 
 
