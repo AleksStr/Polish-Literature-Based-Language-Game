@@ -1,6 +1,6 @@
 from fastapi import APIRouter, HTTPException
-from typing import Dict, Any, List, Optional
-from pydantic import BaseModel, ConfigDict
+from typing import Dict, Any, List, Optional, Union
+from pydantic import BaseModel, Field
 from datetime import datetime
 import uuid
 import random
@@ -12,13 +12,17 @@ class ChoiceOption(BaseModel):
     id: str
     label: str
 
+class GameRequest(BaseModel):
+    bookId: int
+    gameType: str  
+    chapter: int
+
 class ChoiceGap(BaseModel):
     id: str
     correctOptionId: str
     options: List[ChoiceOption]
 
 class ChoiceRiddlePart(BaseModel):
-    model_config = ConfigDict(extra='forbid')
     type: str
     value: Optional[str] = None
     gapId: Optional[str] = None
@@ -31,11 +35,6 @@ class ChoiceRiddle(BaseModel):
 class ChoiceResponse(BaseModel):
     gameId: int
     riddle: ChoiceRiddle
-
-class GameRequest(BaseModel):
-    bookId: int
-    gameType: str
-    chapter: int
 
 class ChoiceAnswer(BaseModel):
     gapId: str
@@ -94,7 +93,7 @@ async def start_choice_game(request: GameRequest):
             page_idx += 1
 
         if not all_pages_responses:
-            raise HTTPException(status_code=404, detail="Chapter content not found")
+            raise HTTPException(status_code=404, detail="Chapter not found")
 
         active_games[game_id] = {
             "start_time": datetime.now(),
@@ -109,14 +108,18 @@ async def start_choice_game(request: GameRequest):
 @router.post("/choice/submit", response_model=ResultResponse)
 async def submit_choice_answers(request: ChoiceAnswerRequest):
     if request.gameId not in active_games:
-        raise HTTPException(status_code=404, detail="Game not found")
+        raise HTTPException(status_code=404, detail="Game session not found")
     
     game_data = active_games[request.gameId]
     correct_map = game_data["correct_answers"]
     
-    hits = sum(1 for a in request.answers if correct_map.get(a.gapId) == a.optionId)
-    total = len(correct_map)
-    accuracy = hits / total if total > 0 else 0
+    hits = 0
+    for user_ans in request.answers:
+        if correct_map.get(user_ans.gapId) == user_ans.optionId:
+            hits += 1
+
+    total_gaps = len(correct_map)
+    accuracy = hits / total_gaps if total_gaps > 0 else 0
     
     if request.elapsedTimeMs:
         sec = request.elapsedTimeMs // 1000
@@ -127,7 +130,7 @@ async def submit_choice_answers(request: ChoiceAnswerRequest):
     
     return ResultResponse(
         score=int(accuracy * 100),
-        mistakes=max(0, total - hits),
+        mistakes=max(0, total_gaps - hits),
         time=f"{sec // 60:02d}:{sec % 60:02d}",
         accuracy=accuracy,
         pagesCompleted=game_data["pages_count"]
