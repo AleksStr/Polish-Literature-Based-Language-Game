@@ -133,3 +133,10 @@ async def submit_anagram_answers(request: AnagramAnswerRequest):
         accuracy=accuracy,
         pagesCompleted=game_data["pages_count"]
     )
+
+@router.get("/anagram/active")
+async def get_active_anagram_games():
+    return {
+        "active_games_count": len(active_games),
+        "game_ids": list(active_games.keys())
+    }

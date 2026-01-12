@@ -118,19 +118,19 @@ def transform_to_choice_model(page_text: str, all_tokens: List, masked_indices: 
     
     sorted_tokens = sorted(all_tokens, key=lambda x: x.start)
     
+    current_text_accumulator = ""
+
     for i, tok in enumerate(sorted_tokens):
-        if tok.start > last_idx:
-            parts.append({
-                "type": "text",
-                "value": page_text[last_idx:tok.start]
-            })
-            
         if i in masked_indices:
+            if tok.start > last_idx:
+                current_text_accumulator += page_text[last_idx:tok.start]
+            
+            if current_text_accumulator:
+                parts.append({"type": "text", "value": current_text_accumulator})
+                current_text_accumulator = ""
+
             gap_id = str(uuid.uuid4())
-            parts.append({
-                "type": "gap",
-                "gapId": gap_id
-            })
+            parts.append({"type": "gap", "gapId": gap_id})
             
             correct_val = tok.display_word
             candidates = find_same_form_candidates(tok, sorted_tokens)
@@ -142,35 +142,29 @@ def transform_to_choice_model(page_text: str, all_tokens: List, masked_indices: 
                 wrong.extend(extra)
             
             options_list = []
-            correct_option_id = ""
-            
             all_choice_texts = [correct_val] + wrong
             random.shuffle(all_choice_texts)
             
+            correct_opt_id = ""
             for text in all_choice_texts:
                 opt_id = str(uuid.uuid4())
                 options_list.append({"id": opt_id, "label": text})
                 if text == correct_val:
-                    correct_option_id = opt_id
+                    correct_opt_id = opt_id
             
             gaps.append({
                 "id": gap_id,
-                "correctOptionId": correct_option_id,
+                "correctOptionId": correct_opt_id,
                 "options": options_list
             })
+            last_idx = tok.finish
         else:
-            parts.append({
-                "type": "text",
-                "value": tok.original_text
-            })
-            
-        last_idx = tok.finish
+            continue
 
     if last_idx < len(page_text):
-        parts.append({
-            "type": "text",
-            "value": page_text[last_idx:]
-        })
+        final_text = page_text[last_idx:]
+        if final_text:
+            parts.append({"type": "text", "value": final_text})
 
     return {
         "id": str(uuid.uuid4()),
