@@ -5,8 +5,12 @@ import uuid
 
 MIN_EXTRA_LINES = 2
 MAX_EXTRA_LINES = 5
+'''
 COLOR_START = "\033[91m"
 COLOR_RESET = "\033[0m"
+'''
+COLOR_START = ""
+COLOR_RESET = ""
 
 def check_if_allowed(extract_path):
     folder = os.path.dirname(extract_path)
@@ -67,20 +71,20 @@ def generate_level(extract_path):
         count += 1
     return pages
 
-def transform_to_crossout_model(riddle_text):
 
+
+def transform_to_crossout_model(riddle_text):
     raw_lines = riddle_text.split("\n")
-    
     line_objects = []
+    
     for line in raw_lines:
-        if not line.strip():
+        content = line.strip()
+        if not content:
             continue
             
-        clean_line = line.replace(COLOR_START, "").replace(COLOR_RESET, "")
-        
         line_objects.append({
             "id": str(uuid.uuid4()),
-            "text": clean_line
+            "text": content
         })
 
     return {

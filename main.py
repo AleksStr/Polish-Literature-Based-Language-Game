@@ -6,6 +6,7 @@ import anagram_endpoint
 import choice_enpoint
 import spellcheck_enpoint
 import switch_endpoint
+import crossout_endpoints
 
 app = FastAPI()
 
@@ -27,6 +28,7 @@ app.include_router(anagram_endpoint.router)
 app.include_router(choice_enpoint.router)
 app.include_router(spellcheck_enpoint.router)
 app.include_router(switch_endpoint.router)
+app.include_router(crossout_endpoints.router)
 
 @app.get("/")
 async def root():
