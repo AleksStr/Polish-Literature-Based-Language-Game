@@ -4,7 +4,7 @@ from typing import List, Tuple, Dict, Any
 import uuid
 ''' current version switches words WITH interpunction that is attached to them'''
 MIN_PAIRS = 3
-MAX_PAIRS = 6
+MAX_PAIRS = 3
 '''
 COLOR_START = "\033[91m"
 COLOR_RESET = "\033[0m"
@@ -102,63 +102,64 @@ def generate_level(extract_path):
         count += 1
     return pages
 
-
 def transform_to_switch_model(page_content: str, word_tokens: List, starting_id: int) -> Dict[str, Any]:
-    lines = page_content.split('\n')
     words_data = []
     current_id = starting_id
     
-    for line_idx, line in enumerate(lines):
-        words = line.split(' ')
-        for word_idx, word in enumerate(words):
-            if word or word_idx == 0:
-                words_data.append({
-                    "id": str(current_id),
-                    "value": word if word else ' ',
-                    "line_idx": line_idx,
-                    "word_idx": word_idx
-                })
-                current_id += 1
-        if line_idx < len(lines) - 1:
-            words_data.append({
-                "id": str(current_id),
-                "value": '\n',
-                "line_idx": line_idx,
-                "word_idx": -1
-            })
-            current_id += 1
-    
-    word_count = random.randint(MIN_PAIRS, MAX_PAIRS)
-    swapped_ids = set()
-    
-    for _ in range(word_count):
-        valid_pairs = []
-        for i in range(len(words_data) - 1):
-            if (words_data[i]["value"].strip() and words_data[i + 1]["value"].strip() and
-                words_data[i]["value"] != '\n' and words_data[i + 1]["value"] != '\n'):
-                valid_pairs.append(i)
+    for i in range(len(word_tokens)):
+        token = word_tokens[i]
+        val = token.original_text
         
-        if not valid_pairs:
-            break
+        start_gap = token.finish
+        if i + 1 < len(word_tokens):
+            end_gap = word_tokens[i+1].start
+        else:
+            end_gap = len(page_content)
             
-        swap_index = random.choice(valid_pairs)
-        tries_counter = 5
+        gap_text = page_content[start_gap:end_gap]
         
-        while (words_data[swap_index]["id"] in swapped_ids or 
-               words_data[swap_index + 1]["id"] in swapped_ids or
-               (swap_index > 0 and words_data[swap_index - 1]["id"] in swapped_ids) or
-               (swap_index < len(words_data) - 2 and words_data[swap_index + 2]["id"] in swapped_ids)):
-            swap_index = random.choice(valid_pairs)
-            tries_counter -= 1
-            if tries_counter < 0:
-                break
+        if '\n' in gap_text:
+            val += '\n'
+            
+        words_data.append({
+            "id": str(current_id),
+            "value": val,
+            "is_punct": token.is_punct
+        })
+        current_id += 1
+
+    swapped_ids = set()
+    pairs_to_swap = random.randint(MIN_PAIRS, MAX_PAIRS)
+    
+    attempts = 0
+    swaps_done = 0
+    while swaps_done < pairs_to_swap and attempts < 100:
+        attempts += 1
+        i = random.randint(0, len(words_data) - 2)
         
-        if tries_counter < 0:
+        w1 = words_data[i]
+        w2 = words_data[i+1]
+        
+        if w1["is_punct"] or w2["is_punct"]:
             continue
             
-        words_data[swap_index]["value"], words_data[swap_index + 1]["value"] = words_data[swap_index + 1]["value"], words_data[swap_index]["value"]
-        swapped_ids.add(words_data[swap_index]["id"])
-        swapped_ids.add(words_data[swap_index + 1]["id"])
+        if '\n' in w1["value"]:
+            continue
+            
+        neighborhood = []
+        for offset in range(-1, 3):
+            idx = i + offset
+            if 0 <= idx < len(words_data):
+                neighborhood.append(words_data[idx]["id"])
+        
+        if any(nid in swapped_ids for nid in neighborhood):
+            continue
+
+        words_data[i]["value"], words_data[i+1]["value"] = words_data[i+1]["value"], words_data[i]["value"]
+        
+        swapped_ids.add(words_data[i]["id"])
+        swapped_ids.add(words_data[i+1]["id"])
+        swaps_done += 1
 
     return {
         "words": [{"id": w["id"], "value": w["value"]} for w in words_data],
