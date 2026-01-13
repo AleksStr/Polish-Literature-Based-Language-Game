@@ -1,12 +1,12 @@
-from fastapi import APIRouter, HTTPException
+from fastapi import APIRouter, BackgroundTasks, HTTPException
 from typing import Dict, Any, List, Optional
 from pydantic import BaseModel
-from datetime import datetime
+from datetime import datetime, timedelta
 import uuid
 import random
 
 from helpers import read_page, get_token_info2
-from anagram import generate_riddle, get_anagram
+from anagram import generate_riddle, transform_to_model
 
 class GameRequest(BaseModel):
     bookId: int
@@ -44,8 +44,20 @@ router = APIRouter(prefix="/games", tags=["anagram"])
 active_games: Dict[int, Dict[str, Any]] = {}
 
 
+def cleanup_expired_games():
+    now = datetime.now()
+    expired_ids = [
+        gid for gid, data in active_games.items()
+        if now - data["start_time"] > timedelta(hours=1)
+    ]
+    for gid in expired_ids:
+        del active_games[gid]
+
+
+
 @router.post("/anagram/start", response_model=List[AnagramResponse])
-async def start_anagram_game(request: GameRequest):
+async def start_anagram_game(request: GameRequest, background_tasks: BackgroundTasks):
+    background_tasks.add_task(cleanup_expired_games)
     if request.gameType != 'anagram':
         raise HTTPException(status_code=400, detail="Invalid game type")
     
@@ -54,6 +66,7 @@ async def start_anagram_game(request: GameRequest):
         responses = []
         all_correct_word_ids = set()
         game_id = random.randint(1000, 9999)
+        current_word_id = 1
         page_idx = 1
 
         while True:
@@ -61,40 +74,40 @@ async def start_anagram_game(request: GameRequest):
             if not page_content:
                 break
             
+            anagrammed_page, masked_words = generate_riddle(page_content)
+            if not masked_words:
+                page_idx += 1
+                continue
+
             tokens = get_token_info2(page_content)
             if not tokens:
                 page_idx += 1
                 continue
 
-            max_to_mask = min(len(tokens), 8)
-            n_to_anagram = random.randint(3, max_to_mask)
-            indices_to_anagram = set(random.sample(range(len(tokens)), n_to_anagram))
-            
-            words_list = []
-            last_idx = 0
-            
+            masked_metadata = []
             for i, token in enumerate(tokens):
-                prefix_text = page_content[last_idx:token.start]
-                if prefix_text:
-                    words_list.append(RiddleWord(id=str(uuid.uuid4()), value=prefix_text))
-                
-                word_id = str(uuid.uuid4())
-                word_value = token.original_text
-                
-                if i in indices_to_anagram:
-                    word_value = get_anagram(word_value)
-                    all_correct_word_ids.add(word_id)
-                
-                words_list.append(RiddleWord(id=word_id, value=word_value))
-                last_idx = token.finish
+                for masked_word in masked_words:
+                    if token.original_text == masked_word.original_text:
+                        masked_metadata.append((i, masked_word))
+                        break
             
-            trailing_text = page_content[last_idx:]
-            if trailing_text:
-                words_list.append(RiddleWord(id=str(uuid.uuid4()), value=trailing_text))
-
+            spellcheck_model, next_id, page_anagram_ids = transform_to_model(
+                anagrammed_page,
+                tokens,
+                masked_metadata,
+                current_word_id
+            )
+            
+            for anagram_id in page_anagram_ids:
+                all_correct_word_ids.add(anagram_id)
+            
+            current_word_id = next_id
+            
+            riddle_words = [RiddleWord(id=w["id"], value=w["value"]) for w in spellcheck_model["riddle"]["prompt"]["words"]]
+            
             responses.append(AnagramResponse(
                 gameId=game_id,
-                riddle=AnagramRiddle(prompt=GameText(words=words_list))
+                riddle=AnagramRiddle(prompt=GameText(words=riddle_words))
             ))
             page_idx += 1
 

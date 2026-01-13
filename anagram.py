@@ -91,28 +91,51 @@ def generate_level(extract_path: str):
         count += 1
     return pages, words
 
-def transform_to_model(all_tokens: List, masked_metadata: List) -> Dict[str, Any]:
-    masked_indices = {idx for idx, info in masked_metadata}
+def transform_to_model(page_text: str, all_tokens: List, masked_metadata: List, start_id: int) -> Tuple[Dict[str, Any], int, List[str]]:
+    masked_words = {info.original_text for _, info in masked_metadata}
     
     words_list = []
-    for i, token in enumerate(all_tokens):
-        value = token.original_text
-        if i in masked_indices:
-            value = get_anagram(value)
-            
-        words_list.append({
-            "id": str(uuid.uuid4()),
-            "value": value
-        })
-        
+    current_id = start_id
+    anagram_ids = []
+    
+    lines = page_text.split('\n')
+    
+    for line_idx, line in enumerate(lines):
+        parts = line.split(' ')
+        for part_idx, part in enumerate(parts):
+            if part:
+                is_last_in_line = line_idx < len(lines) - 1 and part_idx == len(parts) - 1
+                if is_last_in_line:
+                    part_with_newline = part + '\n'
+                    words_list.append({
+                        "id": str(current_id),
+                        "value": part_with_newline
+                    })
+                    if part_with_newline.strip('\n') in masked_words:
+                        anagram_ids.append(str(current_id))
+                    current_id += 1
+                else:
+                    words_list.append({
+                        "id": str(current_id),
+                        "value": part
+                    })
+                    if part in masked_words:
+                        anagram_ids.append(str(current_id))
+                    current_id += 1
+    
+    if page_text.endswith('\n'):
+        last_word = words_list[-1]
+        if not last_word["value"].endswith('\n'):
+            words_list[-1]["value"] = words_list[-1]["value"] + '\n'
+    
     return {
-        "gameId": random.randint(1, 10000),
+        "gameId": random.randint(1000, 9999),
         "riddle": {
             "prompt": {
                 "words": words_list
             }
         }
-    }
+    }, current_id, anagram_ids
 
 if __name__ == "__main__":
     pages, words = generate_level("extracts/book_1/chapter_2.txt")
