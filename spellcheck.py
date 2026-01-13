@@ -152,42 +152,43 @@ def generate_level(extract_path: str) -> List[Tuple[str, List[Tuple[str, str]]]]
         
     return pages_and_words
 
+
 def transform_to_spellcheck_model(page_text: str, all_tokens: List, typos_data: List[Tuple[str, str, int]], start_id: int) -> Tuple[Dict[str, Any], int, List[str]]:
-    typo_words = {typo for _, typo, _ in typos_data}
-    
     words_list = []
     current_id = start_id
     typo_ids = []
     
+    typo_starts = {pos for _, _, pos in typos_data}
+    
+    current_pos = 0
     lines = page_text.split('\n')
     
     for line_idx, line in enumerate(lines):
+        if not line and line_idx < len(lines) - 1:
+            current_pos += 1
+            continue
+            
         parts = line.split(' ')
         for part_idx, part in enumerate(parts):
-            if part:
-                is_last_in_line = line_idx < len(lines) - 1 and part_idx == len(parts) - 1
-                if is_last_in_line:
-                    part_with_newline = part + '\n'
-                    words_list.append({
-                        "id": str(current_id),
-                        "value": part_with_newline
-                    })
-                    if part_with_newline.strip('\n') in typo_words:
-                        typo_ids.append(str(current_id))
-                else:
-                    words_list.append({
-                        "id": str(current_id),
-                        "value": part
-                    })
-                    if part in typo_words:
-                        typo_ids.append(str(current_id))
-                current_id += 1
-    
-    if page_text.endswith('\n'):
-        last_word = words_list[-1]
-        if not last_word["value"].endswith('\n'):
-            words_list[-1]["value"] = words_list[-1]["value"] + '\n'
-    
+            if not part:
+                current_pos += 1
+                continue
+            
+            word_id = str(current_id)
+            is_last_in_line = line_idx < len(lines) - 1 and part_idx == len(parts) - 1
+            display_val = part + '\n' if is_last_in_line else part
+            
+            words_list.append({
+                "id": word_id,
+                "value": display_val
+            })
+            
+            if current_pos in typo_starts:
+                typo_ids.append(word_id)
+            
+            current_pos += len(part) + 1
+            current_id += 1
+            
     return {
         "gameId": random.randint(1000, 9999),
         "riddle": {
