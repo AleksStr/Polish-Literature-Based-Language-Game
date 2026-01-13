@@ -162,23 +162,31 @@ def transform_to_spellcheck_model(page_text: str, all_tokens: List, typos_data: 
     lines = page_text.split('\n')
     
     for line_idx, line in enumerate(lines):
-        if line_idx > 0:
-            words_list.append({
-                "id": str(current_id),
-                "value": "\n"
-            })
-            current_id += 1
-            
         parts = line.split(' ')
-        for part in parts:
+        for part_idx, part in enumerate(parts):
             if part:
-                words_list.append({
-                    "id": str(current_id),
-                    "value": part
-                })
-                if part in typo_words:
-                    typo_ids.append(str(current_id))
+                is_last_in_line = line_idx < len(lines) - 1 and part_idx == len(parts) - 1
+                if is_last_in_line:
+                    part_with_newline = part + '\n'
+                    words_list.append({
+                        "id": str(current_id),
+                        "value": part_with_newline
+                    })
+                    if part_with_newline.strip('\n') in typo_words:
+                        typo_ids.append(str(current_id))
+                else:
+                    words_list.append({
+                        "id": str(current_id),
+                        "value": part
+                    })
+                    if part in typo_words:
+                        typo_ids.append(str(current_id))
                 current_id += 1
+    
+    if page_text.endswith('\n'):
+        last_word = words_list[-1]
+        if not last_word["value"].endswith('\n'):
+            words_list[-1]["value"] = words_list[-1]["value"] + '\n'
     
     return {
         "gameId": random.randint(1000, 9999),
