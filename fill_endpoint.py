@@ -1,7 +1,7 @@
-from fastapi import APIRouter, HTTPException
+from fastapi import APIRouter, HTTPException, BackgroundTasks
 from typing import Dict, Any, List
 import random
-from datetime import datetime
+from datetime import datetime, timedelta
 import uuid
 
 from helpers import read_page, get_token_info2
@@ -51,13 +51,23 @@ class ResultResponse(BaseModel):
     accuracy: float
     pagesCompleted: int
 
+def cleanup_expired_games():
+    now = datetime.now()
+    expired_ids = [
+        gid for gid, data in active_games.items()
+        if now - data["start_time"] > timedelta(hours=1)
+    ]
+    for gid in expired_ids:
+        del active_games[gid]
+
 
 
 router = APIRouter(prefix="/games", tags=["fill-gaps"])
 active_games: Dict[int, Dict[str, Any]] = {}
 
 @router.post("/fill-gaps/start")
-async def start_fill_gaps_game(request: GameRequest):
+async def start_fill_gaps_game(request: GameRequest, background_tasks: BackgroundTasks):
+    background_tasks.add_task(cleanup_expired_games)
     if request.gameType != 'fill-gaps':
         raise HTTPException(status_code=400, detail="Invalid game type")
     

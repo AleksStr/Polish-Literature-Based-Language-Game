@@ -37,16 +37,16 @@ class ResultResponse(BaseModel):
     pagesCompleted: int
 
 router = APIRouter(prefix="/games", tags=["crossout"])
-active_games_metadata: Dict[int, Dict[str, Any]] = {}
+active_games: Dict[int, Dict[str, Any]] = {}
 
 def cleanup_expired_games():
     now = datetime.now()
     expired_ids = [
-        gid for gid, data in active_games_metadata.items()
+        gid for gid, data in active_games.items()
         if now - data["start_time"] > timedelta(hours=1)
     ]
     for gid in expired_ids:
-        del active_games_metadata[gid]
+        del active_games[gid]
 
 @router.post("/crossout/start", response_model=List[CrossoutResponse])
 async def start_crossout_game(request: GameRequest, background_tasks: BackgroundTasks):
@@ -92,7 +92,7 @@ async def start_crossout_game(request: GameRequest, background_tasks: Background
         if not all_pages_responses:
             raise HTTPException(status_code=404, detail="No content found")
 
-        active_games_metadata[shared_game_id] = {
+        active_games[shared_game_id] = {
             "start_time": datetime.now(),
             "correct_ids": all_extra_line_ids,
             "pages_count": len(all_pages_responses)
@@ -105,10 +105,10 @@ async def start_crossout_game(request: GameRequest, background_tasks: Background
 
 @router.post("/crossout/submit", response_model=ResultResponse)
 async def submit_crossout_answers(request: CrossoutAnswerRequest):
-    if request.gameId not in active_games_metadata:
+    if request.gameId not in active_games:
         raise HTTPException(status_code=404, detail="Game session not found")
     
-    game_data = active_games_metadata[request.gameId]
+    game_data = active_games[request.gameId]
     correct_ids = game_data["correct_ids"]
     
 
@@ -126,7 +126,7 @@ async def submit_crossout_answers(request: CrossoutAnswerRequest):
     else:
         sec = int((datetime.now() - game_data["start_time"]).total_seconds())
         
-    del active_games_metadata[request.gameId]
+    del active_games[request.gameId]
     
     return ResultResponse(
         score=int(accuracy * 100),
@@ -140,6 +140,6 @@ async def submit_crossout_answers(request: CrossoutAnswerRequest):
 async def get_active_games():
 
     return {
-        "active_games_count": len(active_games_metadata),
-        "game_ids": list(active_games_metadata.keys())
+        "active_games_count": len(active_games),
+        "game_ids": list(active_games.keys())
     }

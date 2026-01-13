@@ -6,9 +6,15 @@ import uuid
 
 
 MIN_WORDS = 3
-MAX_WORDS = 8
+MAX_WORDS = 3
+'''
 COLOR_START = "\033[91m"
 COLOR_RESET = "\033[0m"
+'''
+
+COLOR_START = ""
+COLOR_RESET = ""
+
 MIN_WORD_LENGTH_FOR_TYPO = 5
 
 def swap_adjacent_letters(word: str) -> str:
@@ -146,22 +152,34 @@ def generate_level(extract_path: str) -> List[Tuple[str, List[Tuple[str, str]]]]
         
     return pages_and_words
 
-def transform_to_spellcheck_model(page_text: str, all_tokens: List, typos_data: List[Tuple[str, str, int]]) -> Dict[str, Any]:
-
-    typo_map = {start: typo for _, typo, start in typos_data}
+def transform_to_spellcheck_model(page_text: str, all_tokens: List, typos_data: List[Tuple[str, str, int]], start_id: int) -> Tuple[Dict[str, Any], int, List[str]]:
+    typo_words = {typo for _, typo, _ in typos_data}
     
     words_list = []
-    for token in all_tokens:
-        word_value = token.original_text
-        
-        if token.start in typo_map:
-            word_value = typo_map[token.start]
+    current_id = start_id
+    typo_ids = []
+    
+    lines = page_text.split('\n')
+    
+    for line_idx, line in enumerate(lines):
+        if line_idx > 0:
+            words_list.append({
+                "id": str(current_id),
+                "value": "\n"
+            })
+            current_id += 1
             
-        words_list.append({
-            "id": str(uuid.uuid4()),
-            "value": word_value
-        })
-        
+        parts = line.split(' ')
+        for part in parts:
+            if part:
+                words_list.append({
+                    "id": str(current_id),
+                    "value": part
+                })
+                if part in typo_words:
+                    typo_ids.append(str(current_id))
+                current_id += 1
+    
     return {
         "gameId": random.randint(1000, 9999),
         "riddle": {
@@ -169,10 +187,10 @@ def transform_to_spellcheck_model(page_text: str, all_tokens: List, typos_data: 
                 "words": words_list
             }
         }
-    }
+    }, current_id, typo_ids
 
 if __name__=="__main__":
-    extract_file_path = "extracts/Zwierciadlana zagadka/Zwierciadlana zagadka_part_1.txt"
+    extract_file_path = "extracts/book_2/chapter_1.txt"
     pages_data = generate_level(extract_file_path)
 
     for page, riddle_data in pages_data:

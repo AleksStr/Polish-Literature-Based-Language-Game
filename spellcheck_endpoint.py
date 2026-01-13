@@ -1,12 +1,12 @@
-from fastapi import APIRouter, HTTPException
+from fastapi import APIRouter, BackgroundTasks, HTTPException
 from typing import Dict, Any, List, Optional
 from pydantic import BaseModel
-from datetime import datetime
+from datetime import datetime, timedelta
 import uuid
 import random
 
 from helpers import read_page, get_token_info2
-from spellcheck import generate_typo_distractor
+from spellcheck import generate_level, transform_to_spellcheck_model
 
 class GameRequest(BaseModel):
     bookId: int
@@ -43,76 +43,82 @@ class ResultResponse(BaseModel):
 router = APIRouter(prefix="/games", tags=["spellcheck"])
 active_games: Dict[int, Dict[str, Any]] = {}
 
+def cleanup_expired_games():
+    now = datetime.now()
+    expired_ids = [
+        gid for gid, data in active_games.items()
+        if now - data["start_time"] > timedelta(hours=1)
+    ]
+    for gid in expired_ids:
+        del active_games[gid]
+
 @router.post("/spellcheck/start", response_model=List[SpellcheckResponse])
-async def start_spellcheck_game(request: GameRequest):
+async def start_spellcheck_game(request: GameRequest, background_tasks: BackgroundTasks):
+    background_tasks.add_task(cleanup_expired_games)
+    
     if request.gameType != 'spellcheck':
         raise HTTPException(status_code=400, detail="Invalid game type")
     
     try:
         extract_path = f"extracts/book_{request.bookId}/chapter_{request.chapter}.txt"
-        game_id = random.randint(1000, 9999)
+        
+        pages_data = generate_level(extract_path)
+        
+        if not pages_data:
+            raise HTTPException(status_code=404, detail="Content not found")
         
         all_pages_responses = []
         typo_word_ids = set()
-        page_idx = 1
-
-        while True:
-            page_content = read_page(extract_path, page_idx)
-            if not page_content:
-                break
-            
-            word_tokens = get_token_info2(page_content)
-            if not word_tokens:
-                page_idx += 1
+        game_id = random.randint(1000, 9999)
+        current_word_id = 1
+        
+        for page_idx, (masked_page, riddle_data) in enumerate(pages_data, 1):
+            original_page = read_page(extract_path, page_idx)
+            if not original_page:
                 continue
-
-            maskable_indices = [
-                i for i, t in enumerate(word_tokens) 
-                if len(t.original_text) >= 5
-            ]
-            
-            n_typos = min(len(maskable_indices), random.randint(3, 8))
-            chosen_indices = set(random.sample(maskable_indices, n_typos)) if maskable_indices else set()
-            
-            riddle_words = []
-            last_idx = 0
-            
-            for i, token in enumerate(word_tokens):
-                prefix_text = page_content[last_idx:token.start]
-                if prefix_text:
-                    riddle_words.append(RiddleWord(id=str(uuid.uuid4()), value=prefix_text))
                 
-                word_id = str(uuid.uuid4())
-                word_value = token.original_text
-                
-                if i in chosen_indices:
-                    word_value = generate_typo_distractor(word_value)
-                    typo_word_ids.add(word_id)
-                
-                riddle_words.append(RiddleWord(id=word_id, value=word_value))
-                last_idx = token.finish
+            word_tokens = get_token_info2(original_page)
+            if not word_tokens:
+                continue
             
-            trailing_text = page_content[last_idx:]
-            if trailing_text:
-                riddle_words.append(RiddleWord(id=str(uuid.uuid4()), value=trailing_text))
-
+            typos_with_positions = []
+            for correct_word, typo_word in riddle_data:
+                for token in word_tokens:
+                    if token.original_text == correct_word:
+                        typos_with_positions.append((correct_word, typo_word, token.start))
+                        break
+            
+            
+            spellcheck_model, next_id, page_typo_ids = transform_to_spellcheck_model(
+                masked_page, 
+                word_tokens, 
+                typos_with_positions,
+                current_word_id
+            )
+            
+            for typo_id in page_typo_ids:
+                typo_word_ids.add(typo_id)
+            
+            current_word_id = next_id
+            
+            riddle_words = [RiddleWord(id=w["id"], value=w["value"]) for w in spellcheck_model["riddle"]["prompt"]["words"]]
+            
             all_pages_responses.append(SpellcheckResponse(
                 gameId=game_id,
                 riddle=SpellcheckRiddle(
                     prompt=GameText(words=riddle_words)
                 )
             ))
-            page_idx += 1
-
+        
         if not all_pages_responses:
             raise HTTPException(status_code=404, detail="Content not found")
-
+        
         active_games[game_id] = {
             "start_time": datetime.now(),
             "correct_ids": typo_word_ids,
             "pages_count": len(all_pages_responses)
         }
-
+        
         return all_pages_responses
         
     except Exception as e:
