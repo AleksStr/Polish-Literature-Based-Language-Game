@@ -97,7 +97,7 @@ def transform_to_model(page_text: str, all_tokens: List, masked_metadata: List, 
     current_id = start_id
     anagram_ids = []
     
-    masked_positions = {(m.start, m.finish) for _, m in masked_metadata}
+    token_map = {t.start: t.original_text for t in all_tokens}
     
     current_offset = 0
     lines = page_text.split('\n')
@@ -109,16 +109,17 @@ def transform_to_model(page_text: str, all_tokens: List, masked_metadata: List, 
                 current_offset += 1
                 continue
             
-            is_last_in_line = line_idx < len(lines) - 1 and part_idx == len(parts) - 1
-            val = part + '\n' if is_last_in_line else part
-            
             word_id = str(current_id)
+            is_last_in_line = line_idx < len(lines) - 1 and part_idx == len(parts) - 1
+            display_val = part + '\n' if is_last_in_line else part
+            
             words_list.append({
                 "id": word_id,
-                "value": val
+                "value": display_val
             })
             
-            if (current_offset, current_offset + len(part)) in masked_positions:
+            original_val = token_map.get(current_offset)
+            if original_val and part != original_val:
                 anagram_ids.append(word_id)
             
             current_offset += len(part) + 1
