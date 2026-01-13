@@ -1,7 +1,7 @@
-from fastapi import APIRouter, HTTPException
+from fastapi import APIRouter, HTTPException, BackgroundTasks
 from typing import Dict, Any, List, Optional
 from pydantic import BaseModel
-from datetime import datetime
+from datetime import datetime, timedelta
 import random
 
 from helpers import read_page
@@ -37,11 +37,21 @@ class ResultResponse(BaseModel):
     pagesCompleted: int
 
 router = APIRouter(prefix="/games", tags=["crossout"])
-
 active_games_metadata: Dict[int, Dict[str, Any]] = {}
 
+def cleanup_expired_games():
+    now = datetime.now()
+    expired_ids = [
+        gid for gid, data in active_games_metadata.items()
+        if now - data["start_time"] > timedelta(hours=1)
+    ]
+    for gid in expired_ids:
+        del active_games_metadata[gid]
+
 @router.post("/crossout/start", response_model=List[CrossoutResponse])
-async def start_crossout_game(request: GameRequest):
+async def start_crossout_game(request: GameRequest, background_tasks: BackgroundTasks):
+    background_tasks.add_task(cleanup_expired_games)
+    
     if request.gameType != 'crossout':
         raise HTTPException(status_code=400, detail="Invalid game type")
     try:
@@ -91,6 +101,7 @@ async def start_crossout_game(request: GameRequest):
         return all_pages_responses
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
+
 
 @router.post("/crossout/submit", response_model=ResultResponse)
 async def submit_crossout_answers(request: CrossoutAnswerRequest):
