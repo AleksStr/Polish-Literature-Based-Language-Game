@@ -55,7 +55,7 @@ def cleanup_expired_games():
     for gid in expired_ids:
         del active_games[gid]
 
-@router.post("/switch/start", response_model=List[SwitchResponse])
+router.post("/switch/start", response_model=List[SwitchResponse])
 async def start_switch_game(request: GameRequest, background_tasks: BackgroundTasks):
     background_tasks.add_task(cleanup_expired_games)
     if request.gameType != 'switch':
@@ -66,6 +66,9 @@ async def start_switch_game(request: GameRequest, background_tasks: BackgroundTa
         game_id = random.randint(1000, 9999)
         all_pages_responses = []
         all_correct_swapped_ids = set()
+        
+        page_to_ids = {}
+        
         page_idx = 1
         current_id = 1
 
@@ -81,6 +84,9 @@ async def start_switch_game(request: GameRequest, background_tasks: BackgroundTa
 
             page_data = transform_to_switch_model(page_content, word_tokens, current_id)
             
+            page_ids = {w["id"] for w in page_data["words"]}
+            page_to_ids[page_idx] = page_ids
+            
             current_id = page_data["next_id"]
             all_correct_swapped_ids.update(page_data["swapped_ids"])
 
@@ -95,7 +101,8 @@ async def start_switch_game(request: GameRequest, background_tasks: BackgroundTa
         active_games[game_id] = {
             "start_time": datetime.now(),
             "correct_ids": all_correct_swapped_ids,
-            "pages_count": len(all_pages_responses)
+            "page_to_ids": page_to_ids,
+            "total_pages": len(all_pages_responses)
         }
 
         return all_pages_responses
@@ -109,12 +116,18 @@ async def submit_switch_answers(request: SwitchAnswerRequest):
     
     game_data = active_games[request.gameId]
     correct_ids = game_data["correct_ids"]
+    page_to_ids = game_data["page_to_ids"]
     
     user_submitted_ids = set()
     for pair in request.selectedPairs:
         user_submitted_ids.add(pair.firstWordId)
         user_submitted_ids.add(pair.secondWordId)
     
+    pages_with_activity = 0
+    for p_idx, p_ids in page_to_ids.items():
+        if any(uid in p_ids for uid in user_submitted_ids):
+            pages_with_activity += 1
+            
     hits = len(user_submitted_ids.intersection(correct_ids))
     misses = len(user_submitted_ids - correct_ids)
     unfound = len(correct_ids - user_submitted_ids)
@@ -135,7 +148,7 @@ async def submit_switch_answers(request: SwitchAnswerRequest):
         mistakes=total_mistakes,
         time=f"{sec // 60:02d}:{sec % 60:02d}",
         accuracy=accuracy,
-        pagesCompleted=game_data["pages_count"]
+        pagesCompleted=pages_with_activity
     )
 
 @router.get("/switch/active")
