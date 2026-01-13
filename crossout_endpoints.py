@@ -125,3 +125,11 @@ async def submit_crossout_answers(request: CrossoutAnswerRequest):
         accuracy=accuracy,
         pagesCompleted=game_data["pages_count"]
     )
+
+@router.get("/crossout/active")
+async def get_active_games():
+
+    return {
+        "active_games_count": len(active_games_metadata),
+        "game_ids": list(active_games_metadata.keys())
+    }

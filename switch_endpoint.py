@@ -132,3 +132,11 @@ async def submit_switch_answers(request: SwitchAnswerRequest):
         accuracy=accuracy,
         pagesCompleted=game_data["pages_count"]
     )
+
+@router.get("/switch/active")
+async def get_active_games():
+
+    return {
+        "active_games_count": len(active_games),
+        "game_ids": list(active_games.keys())
+    }
