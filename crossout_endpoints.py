@@ -101,7 +101,7 @@ async def submit_crossout_answers(request: CrossoutAnswerRequest):
     game_data = active_games_metadata[request.gameId]
     correct_ids = game_data["correct_ids"]
     
-    # Directly convert the list to a set for comparison
+
     submitted_ids = set(request.crossedOutLineIds)
     
     hits = len(submitted_ids.intersection(correct_ids))

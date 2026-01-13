@@ -58,6 +58,7 @@ async def start_switch_game(request: GameRequest):
         all_pages_responses = []
         all_correct_swapped_ids = set()
         page_idx = 1
+        current_id = 1
 
         while True:
             page_content = read_page(extract_path, page_idx)
@@ -69,8 +70,8 @@ async def start_switch_game(request: GameRequest):
                 page_idx += 1
                 continue
 
-
-            page_data = transform_to_switch_model(page_content, word_tokens)
+            page_data = transform_to_switch_model(page_content, word_tokens, current_id)
+            current_id = page_data["next_id"]
             
             all_correct_swapped_ids.update(page_data["swapped_ids"])
 
@@ -92,6 +93,7 @@ async def start_switch_game(request: GameRequest):
         }
 
         return all_pages_responses
+        
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 
