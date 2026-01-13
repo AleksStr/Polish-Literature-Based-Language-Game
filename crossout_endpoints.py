@@ -5,7 +5,7 @@ from datetime import datetime
 import random
 
 from helpers import read_page
-from crossout import generate_riddle, transform_to_crossout_model
+from crossout2 import generate_riddle, transform_to_crossout_model
 
 class GameRequest(BaseModel):
     bookId: int
@@ -65,7 +65,6 @@ async def start_crossout_game(request: GameRequest):
             
             current_page_lines = []
             for line_text in lines_text_list:
-
                 line_id = str(line_id_counter)
                 line_id_counter += 1
                 

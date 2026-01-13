@@ -51,6 +51,7 @@ def get_random_extract(extract_path):
         random_extract = random.choice(os.listdir(folder)) 
     return os.path.join(folder, random_extract)
 
+
 def generate_riddle(page, extract_path):
     if not check_if_allowed:
         return 0
@@ -70,7 +71,6 @@ def generate_level(extract_path):
         pages.append(generate_riddle(read_page(extract_path, count), extract_path))
         count += 1
     return pages
-
 
 
 def transform_to_crossout_model(riddle_text: str):
