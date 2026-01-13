@@ -73,26 +73,9 @@ def generate_level(extract_path):
 
 
 
-def transform_to_crossout_model(riddle_text):
+def transform_to_crossout_model(riddle_text: str):
     raw_lines = riddle_text.split("\n")
-    line_objects = []
-    
-    for line in raw_lines:
-        content = line.strip()
-        if not content:
-            continue
-            
-        line_objects.append({
-            "id": str(uuid.uuid4()),
-            "text": content
-        })
-
-    return {
-        "gameId": random.randint(1000, 9999),
-        "riddle": {
-            "lines": line_objects
-        }
-    }
+    return [line.strip() for line in raw_lines if line.strip()]
 
 
 if __name__ == "__main__":

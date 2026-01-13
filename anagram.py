@@ -115,7 +115,7 @@ def transform_to_model(all_tokens: List, masked_metadata: List) -> Dict[str, Any
     }
 
 if __name__ == "__main__":
-    pages, words = generate_level("extracts/Zwierciadlana zagadka/Zwierciadlana zagadka_part_1.txt")
+    pages, words = generate_level("extracts/book_1/chapter_2.txt")
     
     for page, word_list in zip(pages, words):
         print("\n| Next Page |\n")

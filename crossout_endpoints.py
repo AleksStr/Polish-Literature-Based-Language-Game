@@ -50,7 +50,8 @@ async def start_crossout_game(request: GameRequest):
         all_extra_line_ids = set()
         
         page_idx = 1
-        shared_game_id = None
+        shared_game_id = random.randint(1000, 9999)
+        line_id_counter = 1 
 
         while True:
             page_content = read_page(extract_path, page_idx)
@@ -58,17 +59,15 @@ async def start_crossout_game(request: GameRequest):
                 break
             
             riddle_text = generate_riddle(page_content, extract_path)
-            page_data = transform_to_crossout_model(riddle_text) 
+            lines_text_list = transform_to_crossout_model(riddle_text)
             
-            if shared_game_id is None:
-                shared_game_id = page_data["gameId"]
-
             original_lines = {line.strip() for line in page_content.split("\n") if line.strip()}
             
             current_page_lines = []
-            for line_obj in page_data["riddle"]["lines"]:
-                line_text = line_obj["text"].strip()
-                line_id = line_obj["id"]
+            for line_text in lines_text_list:
+
+                line_id = str(line_id_counter)
+                line_id_counter += 1
                 
                 if line_text not in original_lines:
                     all_extra_line_ids.add(line_id)
@@ -82,7 +81,7 @@ async def start_crossout_game(request: GameRequest):
             page_idx += 1
 
         if not all_pages_responses:
-            raise HTTPException(status_code=404, detail="No content found for this book/chapter")
+            raise HTTPException(status_code=404, detail="No content found")
 
         active_games_metadata[shared_game_id] = {
             "start_time": datetime.now(),
@@ -91,8 +90,6 @@ async def start_crossout_game(request: GameRequest):
         }
 
         return all_pages_responses
-    except HTTPException:
-        raise
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 

@@ -75,7 +75,13 @@ async def start_spellcheck_game(request: GameRequest):
             chosen_indices = set(random.sample(maskable_indices, n_typos)) if maskable_indices else set()
             
             riddle_words = []
+            last_idx = 0
+            
             for i, token in enumerate(word_tokens):
+                prefix_text = page_content[last_idx:token.start]
+                if prefix_text:
+                    riddle_words.append(RiddleWord(id=str(uuid.uuid4()), value=prefix_text))
+                
                 word_id = str(uuid.uuid4())
                 word_value = token.original_text
                 
@@ -84,6 +90,11 @@ async def start_spellcheck_game(request: GameRequest):
                     typo_word_ids.add(word_id)
                 
                 riddle_words.append(RiddleWord(id=word_id, value=word_value))
+                last_idx = token.finish
+            
+            trailing_text = page_content[last_idx:]
+            if trailing_text:
+                riddle_words.append(RiddleWord(id=str(uuid.uuid4()), value=trailing_text))
 
             all_pages_responses.append(SpellcheckResponse(
                 gameId=game_id,

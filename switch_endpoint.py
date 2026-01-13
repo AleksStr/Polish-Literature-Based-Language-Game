@@ -69,6 +69,7 @@ async def start_switch_game(request: GameRequest):
                 page_idx += 1
                 continue
 
+
             page_data = transform_to_switch_model(page_content, word_tokens)
             
             all_correct_swapped_ids.update(page_data["swapped_ids"])
@@ -91,7 +92,6 @@ async def start_switch_game(request: GameRequest):
         }
 
         return all_pages_responses
-        
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 

@@ -102,39 +102,67 @@ def generate_level(extract_path):
         count += 1
     return pages
 
+
 def transform_to_switch_model(page_content: str, word_tokens: List) -> Dict[str, Any]:
-    words_data = []
+    full_words_list = []
+    last_idx = 0
+    token_entries = []
+
     for t in word_tokens:
-        words_data.append({
+
+        prefix_text = page_content[last_idx:t.start]
+        if prefix_text:
+            full_words_list.append({
+                "id": str(uuid.uuid4()),
+                "value": prefix_text,
+                "is_token": False
+            })
+        
+
+        token_entry = {
             "id": str(uuid.uuid4()),
             "value": t.original_text,
-            "index": len(words_data)
+            "is_token": True
+        }
+        full_words_list.append(token_entry)
+        token_entries.append(token_entry)
+        last_idx = t.finish
+
+    trailing_text = page_content[last_idx:]
+    if trailing_text:
+        full_words_list.append({
+            "id": str(uuid.uuid4()),
+            "value": trailing_text,
+            "is_token": False
         })
 
-    num_swaps = random.randint(3,6)
+
+    num_swaps = random.randint(MIN_PAIRS, MAX_PAIRS)
     swapped_ids = set()
     
+
     for _ in range(num_swaps):
         valid_indices = []
-        for i in range(len(words_data) - 1):
-            w1, w2 = words_data[i], words_data[i+1]
-            if (w1["id"] not in swapped_ids and 
-                w2["id"] not in swapped_ids and
-                w1["value"].strip() and w2["value"].strip() and
-                not any(c in w1["value"] for c in ".,!?;:")):
+        for i in range(len(token_entries) - 1):
+            t1, t2 = token_entries[i], token_entries[i+1]
+            if (t1["id"] not in swapped_ids and 
+                t2["id"] not in swapped_ids and 
+                t1["value"] != t2["value"]):
                 valid_indices.append(i)
         
         if not valid_indices:
             break
             
         idx = random.choice(valid_indices)
-        words_data[idx]["value"], words_data[idx+1]["value"] = words_data[idx+1]["value"], words_data[idx]["value"]
+
+        token_entries[idx]["value"], token_entries[idx+1]["value"] = \
+            token_entries[idx+1]["value"], token_entries[idx]["value"]
         
-        swapped_ids.add(words_data[idx]["id"])
-        swapped_ids.add(words_data[idx+1]["id"])
+        swapped_ids.add(token_entries[idx]["id"])
+        swapped_ids.add(token_entries[idx+1]["id"])
 
     return {
-        "words": [{"id": w["id"], "value": w["value"]} for w in words_data],
+        "words": [{"id": w["id"], "value": w["value"]} for w in full_words_list],
         "swapped_ids": swapped_ids
     }
 

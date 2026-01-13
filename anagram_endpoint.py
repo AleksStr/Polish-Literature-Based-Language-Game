@@ -43,6 +43,7 @@ class ResultResponse(BaseModel):
 router = APIRouter(prefix="/games", tags=["anagram"])
 active_games: Dict[int, Dict[str, Any]] = {}
 
+
 @router.post("/anagram/start", response_model=List[AnagramResponse])
 async def start_anagram_game(request: GameRequest):
     if request.gameType != 'anagram':
@@ -65,21 +66,31 @@ async def start_anagram_game(request: GameRequest):
                 page_idx += 1
                 continue
 
-            
             max_to_mask = min(len(tokens), 8)
             n_to_anagram = random.randint(3, max_to_mask)
             indices_to_anagram = set(random.sample(range(len(tokens)), n_to_anagram))
             
             words_list = []
+            last_idx = 0
+            
             for i, token in enumerate(tokens):
-                word_id = str(uuid.uuid4())
-                if i in indices_to_anagram:
-                    value = get_anagram(token.original_text)
-                    all_correct_word_ids.add(word_id)
-                else:
-                    value = token.original_text
+                prefix_text = page_content[last_idx:token.start]
+                if prefix_text:
+                    words_list.append(RiddleWord(id=str(uuid.uuid4()), value=prefix_text))
                 
-                words_list.append(RiddleWord(id=word_id, value=value))
+                word_id = str(uuid.uuid4())
+                word_value = token.original_text
+                
+                if i in indices_to_anagram:
+                    word_value = get_anagram(word_value)
+                    all_correct_word_ids.add(word_id)
+                
+                words_list.append(RiddleWord(id=word_id, value=word_value))
+                last_idx = token.finish
+            
+            trailing_text = page_content[last_idx:]
+            if trailing_text:
+                words_list.append(RiddleWord(id=str(uuid.uuid4()), value=trailing_text))
 
             responses.append(AnagramResponse(
                 gameId=game_id,
