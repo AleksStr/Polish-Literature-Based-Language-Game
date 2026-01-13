@@ -160,7 +160,15 @@ async def submit_anagram_answers(request: AnagramAnswerRequest):
 
 @router.get("/anagram/active")
 async def get_active_anagram_games():
+    games_debug = {}
+    for gid, data in active_games.items():
+        games_debug[gid] = {
+            "correct_count": len(data["correct_word_ids"]),
+            "correct_ids": sorted(list(data["correct_word_ids"]), key=int),
+            "start_time": data["start_time"].isoformat()
+        }
+    
     return {
         "active_games_count": len(active_games),
-        "game_ids": list(active_games.keys())
+        "games": games_debug
     }
