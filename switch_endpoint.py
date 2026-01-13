@@ -55,7 +55,7 @@ def cleanup_expired_games():
     for gid in expired_ids:
         del active_games[gid]
 
-router.post("/switch/start", response_model=List[SwitchResponse])
+@router.post("/switch/start", response_model=List[SwitchResponse])
 async def start_switch_game(request: GameRequest, background_tasks: BackgroundTasks):
     background_tasks.add_task(cleanup_expired_games)
     if request.gameType != 'switch':
