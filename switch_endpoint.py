@@ -64,7 +64,6 @@ async def start_switch_game(request: GameRequest, background_tasks: BackgroundTa
     try:
         extract_path = f"extracts/book_{request.bookId}/chapter_{request.chapter}.txt"
         game_id = random.randint(1000, 9999)
-        
         all_pages_responses = []
         all_correct_swapped_ids = set()
         page_idx = 1
