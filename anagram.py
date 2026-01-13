@@ -6,7 +6,7 @@ from typing import List, Tuple, Dict, Any
 import uuid
 
 MIN_WORDS = 3
-MAX_WORDS = 8
+MAX_WORDS = 3
 '''
 COLOR_START = "\033[91m"
 COLOR_RESET = "\033[0m"
@@ -91,47 +91,39 @@ def generate_level(extract_path: str):
         count += 1
     return pages, words
 
+
 def transform_to_model(page_text: str, all_tokens: List, masked_metadata: List, start_id: int) -> Tuple[Dict[str, Any], int, List[str]]:
-    original_to_anagram = {}
-    for _, info in masked_metadata:
-        anagram_word = get_anagram(info.original_text)
-        original_to_anagram[info.original_text] = anagram_word
-    
     words_list = []
     current_id = start_id
     anagram_ids = []
     
+    masked_positions = {(m.start, m.finish) for _, m in masked_metadata}
+    
+    current_offset = 0
     lines = page_text.split('\n')
     
     for line_idx, line in enumerate(lines):
         parts = line.split(' ')
         for part_idx, part in enumerate(parts):
-            if part:
-                is_last_in_line = line_idx < len(lines) - 1 and part_idx == len(parts) - 1
-                if is_last_in_line:
-                    part_with_newline = part + '\n'
-                    words_list.append({
-                        "id": str(current_id),
-                        "value": part_with_newline
-                    })
-                    clean_part = part_with_newline.strip('\n')
-                    if clean_part in original_to_anagram.values():
-                        anagram_ids.append(str(current_id))
-                    current_id += 1
-                else:
-                    words_list.append({
-                        "id": str(current_id),
-                        "value": part
-                    })
-                    if part in original_to_anagram.values():
-                        anagram_ids.append(str(current_id))
-                    current_id += 1
-    
-    if page_text.endswith('\n'):
-        last_word = words_list[-1]
-        if not last_word["value"].endswith('\n'):
-            words_list[-1]["value"] = words_list[-1]["value"] + '\n'
-    
+            if not part:
+                current_offset += 1
+                continue
+            
+            is_last_in_line = line_idx < len(lines) - 1 and part_idx == len(parts) - 1
+            val = part + '\n' if is_last_in_line else part
+            
+            word_id = str(current_id)
+            words_list.append({
+                "id": word_id,
+                "value": val
+            })
+            
+            if (current_offset, current_offset + len(part)) in masked_positions:
+                anagram_ids.append(word_id)
+            
+            current_offset += len(part) + 1
+            current_id += 1
+            
     return {
         "gameId": random.randint(1000, 9999),
         "riddle": {
