@@ -102,67 +102,49 @@ def generate_level(extract_path):
         count += 1
     return pages
 
+
 def transform_to_switch_model(page_content: str, word_tokens: List, starting_id: int) -> Dict[str, Any]:
+    from switch import generate_riddle
+    
+    riddle_text = generate_riddle(page_content)
+    
+    og_lines = page_content.split('\n')
+    riddle_lines = riddle_text.split('\n')
+    
     words_data = []
+    swapped_ids = set()
     current_id = starting_id
     
-    for i in range(len(word_tokens)):
-        token = word_tokens[i]
-        val = token.original_text
+    for line_idx, (og_line, rid_line) in enumerate(zip(og_lines, riddle_lines)):
+        og_parts = og_line.split(' ')
+        rid_parts = rid_line.split(' ')
         
-        start_gap = token.finish
-        if i + 1 < len(word_tokens):
-            end_gap = word_tokens[i+1].start
-        else:
-            end_gap = len(page_content)
+        max_parts = max(len(og_parts), len(rid_parts))
+        
+        for p_idx in range(max_parts):
+            og_val = og_parts[p_idx] if p_idx < len(og_parts) else ""
+            rid_val = rid_parts[p_idx] if p_idx < len(rid_parts) else ""
             
-        gap_text = page_content[start_gap:end_gap]
-        
-        if '\n' in gap_text:
-            val += '\n'
+            if not rid_val and not og_val:
+                continue
             
-        words_data.append({
-            "id": str(current_id),
-            "value": val,
-            "is_punct": token.is_punct
-        })
-        current_id += 1
-
-    swapped_ids = set()
-    pairs_to_swap = random.randint(MIN_PAIRS, MAX_PAIRS)
-    
-    attempts = 0
-    swaps_done = 0
-    while swaps_done < pairs_to_swap and attempts < 100:
-        attempts += 1
-        i = random.randint(0, len(words_data) - 2)
-        
-        w1 = words_data[i]
-        w2 = words_data[i+1]
-        
-        if w1["is_punct"] or w2["is_punct"]:
-            continue
+            word_id = str(current_id)
+            is_last_in_line = line_idx < len(riddle_lines) - 1 and p_idx == max_parts - 1
             
-        if '\n' in w1["value"]:
-            continue
+            final_val = rid_val + '\n' if is_last_in_line else rid_val
             
-        neighborhood = []
-        for offset in range(-1, 3):
-            idx = i + offset
-            if 0 <= idx < len(words_data):
-                neighborhood.append(words_data[idx]["id"])
-        
-        if any(nid in swapped_ids for nid in neighborhood):
-            continue
-
-        words_data[i]["value"], words_data[i+1]["value"] = words_data[i+1]["value"], words_data[i]["value"]
-        
-        swapped_ids.add(words_data[i]["id"])
-        swapped_ids.add(words_data[i+1]["id"])
-        swaps_done += 1
-
+            words_data.append({
+                "id": word_id,
+                "value": final_val
+            })
+            
+            if og_val != rid_val:
+                swapped_ids.add(word_id)
+            
+            current_id += 1
+            
     return {
-        "words": [{"id": w["id"], "value": w["value"]} for w in words_data],
+        "words": words_data,
         "swapped_ids": swapped_ids,
         "next_id": current_id
     }

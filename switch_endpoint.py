@@ -1,7 +1,7 @@
-from fastapi import APIRouter, HTTPException
+from fastapi import APIRouter, BackgroundTasks, HTTPException
 from typing import Dict, Any, List, Optional
 from pydantic import BaseModel
-from datetime import datetime
+from datetime import datetime, timedelta
 import random
 
 from helpers import read_page, get_token_info2
@@ -46,8 +46,18 @@ class ResultResponse(BaseModel):
 router = APIRouter(prefix="/games", tags=["switch"])
 active_games: Dict[int, Dict[str, Any]] = {}
 
+def cleanup_expired_games():
+    now = datetime.now()
+    expired_ids = [
+        gid for gid, data in active_games.items()
+        if now - data["start_time"] > timedelta(hours=1)
+    ]
+    for gid in expired_ids:
+        del active_games[gid]
+
 @router.post("/switch/start", response_model=List[SwitchResponse])
-async def start_switch_game(request: GameRequest):
+async def start_switch_game(request: GameRequest, background_tasks: BackgroundTasks):
+    background_tasks.add_task(cleanup_expired_games)
     if request.gameType != 'switch':
         raise HTTPException(status_code=400, detail="Invalid game type")
         
@@ -71,20 +81,17 @@ async def start_switch_game(request: GameRequest):
                 continue
 
             page_data = transform_to_switch_model(page_content, word_tokens, current_id)
-            current_id = page_data["next_id"]
             
+            current_id = page_data["next_id"]
             all_correct_swapped_ids.update(page_data["swapped_ids"])
 
             all_pages_responses.append(SwitchResponse(
                 gameId=game_id,
                 riddle=SwitchRiddle(
-                    prompt=GameText(words=page_data["words"])
+                    prompt=GameText(words=[RiddleWord(**w) for w in page_data["words"]])
                 )
             ))
             page_idx += 1
-
-        if not all_pages_responses:
-            raise HTTPException(status_code=404, detail="Chapter content not found")
 
         active_games[game_id] = {
             "start_time": datetime.now(),
@@ -93,7 +100,6 @@ async def start_switch_game(request: GameRequest):
         }
 
         return all_pages_responses
-        
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 
