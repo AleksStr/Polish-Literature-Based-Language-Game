@@ -49,5 +49,5 @@ def get_token_info2(text:str):
     return word_tokens
 
 def is_punctuation(text: str) -> bool:
-    dash_chars = "-–—" 
+    dash_chars = "-–——" 
     return bool(text) and all(char in string.punctuation + dash_chars for char in text)
