@@ -92,7 +92,10 @@ def generate_level(extract_path: str):
     return pages, words
 
 def transform_to_model(page_text: str, all_tokens: List, masked_metadata: List, start_id: int) -> Tuple[Dict[str, Any], int, List[str]]:
-    masked_words = {info.original_text for _, info in masked_metadata}
+    original_to_anagram = {}
+    for _, info in masked_metadata:
+        anagram_word = get_anagram(info.original_text)
+        original_to_anagram[info.original_text] = anagram_word
     
     words_list = []
     current_id = start_id
@@ -111,7 +114,8 @@ def transform_to_model(page_text: str, all_tokens: List, masked_metadata: List, 
                         "id": str(current_id),
                         "value": part_with_newline
                     })
-                    if part_with_newline.strip('\n') in masked_words:
+                    clean_part = part_with_newline.strip('\n')
+                    if clean_part in original_to_anagram.values():
                         anagram_ids.append(str(current_id))
                     current_id += 1
                 else:
@@ -119,7 +123,7 @@ def transform_to_model(page_text: str, all_tokens: List, masked_metadata: List, 
                         "id": str(current_id),
                         "value": part
                     })
-                    if part in masked_words:
+                    if part in original_to_anagram.values():
                         anagram_ids.append(str(current_id))
                     current_id += 1
     
