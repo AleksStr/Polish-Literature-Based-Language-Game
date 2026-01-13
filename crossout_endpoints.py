@@ -26,7 +26,7 @@ class CrossoutResponse(BaseModel):
 class CrossoutAnswerRequest(BaseModel):
     type: str
     gameId: int
-    crossedOutLineIds: str
+    crossedOutLineIds: List[str]  
     elapsedTimeMs: Optional[int] = None
 
 class ResultResponse(BaseModel):
@@ -101,7 +101,8 @@ async def submit_crossout_answers(request: CrossoutAnswerRequest):
     game_data = active_games_metadata[request.gameId]
     correct_ids = game_data["correct_ids"]
     
-    submitted_ids = {id.strip() for id in request.crossedOutLineIds.split(",") if id.strip()}
+    # Directly convert the list to a set for comparison
+    submitted_ids = set(request.crossedOutLineIds)
     
     hits = len(submitted_ids.intersection(correct_ids))
     misses = len(submitted_ids - correct_ids)
