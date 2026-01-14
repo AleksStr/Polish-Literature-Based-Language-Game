@@ -61,44 +61,35 @@ async def start_spellcheck_game(request: GameRequest, background_tasks: Backgrou
     
     try:
         extract_path = f"extracts/book_{request.bookId}/chapter_{request.chapter}.txt"
-        
-        pages_data = generate_level(extract_path)
-        
-        if not pages_data:
-            raise HTTPException(status_code=404, detail="Content not found")
+        game_id = random.randint(1000, 9999)
         
         all_pages_responses = []
-        typo_word_ids = set()
-        game_id = random.randint(1000, 9999)
-        current_word_id = 1
+        all_typo_ids = set()
+        page_to_ids = {}
         
-        for page_idx, (masked_page, riddle_data) in enumerate(pages_data, 1):
+        current_word_id = 1
+        page_idx = 1
+        
+        while True:
             original_page = read_page(extract_path, page_idx)
             if not original_page:
-                continue
+                break
                 
             word_tokens = get_token_info2(original_page)
             if not word_tokens:
+                page_idx += 1
                 continue
-            
-            typos_with_positions = []
-            for correct_word, typo_word in riddle_data:
-                for token in word_tokens:
-                    if token.original_text == correct_word:
-                        typos_with_positions.append((correct_word, typo_word, token.start))
-                        break
-            
-            
+
             spellcheck_model, next_id, page_typo_ids = transform_to_spellcheck_model(
-                masked_page, 
+                original_page, 
                 word_tokens, 
-                typos_with_positions,
                 current_word_id
             )
             
-            for typo_id in page_typo_ids:
-                typo_word_ids.add(typo_id)
+            page_ids = {w["id"] for w in spellcheck_model["riddle"]["prompt"]["words"]}
+            page_to_ids[page_idx] = page_ids
             
+            all_typo_ids.update(page_typo_ids)
             current_word_id = next_id
             
             riddle_words = [RiddleWord(id=w["id"], value=w["value"]) for w in spellcheck_model["riddle"]["prompt"]["words"]]
@@ -109,14 +100,16 @@ async def start_spellcheck_game(request: GameRequest, background_tasks: Backgrou
                     prompt=GameText(words=riddle_words)
                 )
             ))
+            page_idx += 1
         
         if not all_pages_responses:
             raise HTTPException(status_code=404, detail="Content not found")
         
         active_games[game_id] = {
             "start_time": datetime.now(),
-            "correct_ids": typo_word_ids,
-            "pages_count": len(all_pages_responses)
+            "correct_ids": all_typo_ids,
+            "page_to_ids": page_to_ids,
+            "total_pages": len(all_pages_responses)
         }
         
         return all_pages_responses
@@ -131,7 +124,13 @@ async def submit_spellcheck_answers(request: SpellcheckAnswerRequest):
     
     game_data = active_games[request.gameId]
     correct_ids = game_data["correct_ids"]
+    page_to_ids = game_data["page_to_ids"]
     submitted_ids = set(request.selectedWordIds)
+    
+    pages_with_activity = 0
+    for p_idx, p_ids in page_to_ids.items():
+        if any(sid in p_ids for sid in submitted_ids):
+            pages_with_activity += 1
     
     hits = len(submitted_ids.intersection(correct_ids))
     misses = len(submitted_ids - correct_ids)
@@ -153,7 +152,7 @@ async def submit_spellcheck_answers(request: SpellcheckAnswerRequest):
         mistakes=total_mistakes,
         time=f"{sec // 60:02d}:{sec % 60:02d}",
         accuracy=accuracy,
-        pagesCompleted=game_data["pages_count"]
+        pagesCompleted=pages_with_activity
     )
 
 @router.get("/spellcheck/active")

@@ -66,6 +66,7 @@ async def start_choice_game(request: GameRequest):
         game_id = random.randint(1000, 9999)
         all_pages_responses = []
         correct_answers_state = {}
+        page_to_gap_ids = {}
         page_idx = 1
 
         while True:
@@ -83,9 +84,13 @@ async def start_choice_game(request: GameRequest):
             
             page_data = transform_to_choice_model(page_content, word_tokens, chosen_indices)
             
+            current_page_gaps = set()
             for gap in page_data["gaps"]:
-                correct_answers_state[gap["id"]] = gap["correctOptionId"]
+                gap_id = gap["id"]
+                correct_answers_state[gap_id] = gap["correctOptionId"]
+                current_page_gaps.add(gap_id)
 
+            page_to_gap_ids[page_idx] = current_page_gaps
             all_pages_responses.append(ChoiceResponse(
                 gameId=game_id,
                 riddle=ChoiceRiddle(**page_data)
@@ -98,7 +103,8 @@ async def start_choice_game(request: GameRequest):
         active_games[game_id] = {
             "start_time": datetime.now(),
             "correct_answers": correct_answers_state,
-            "pages_count": len(all_pages_responses)
+            "page_to_gap_ids": page_to_gap_ids,
+            "total_pages": len(all_pages_responses)
         }
 
         return all_pages_responses
@@ -112,11 +118,19 @@ async def submit_choice_answers(request: ChoiceAnswerRequest):
     
     game_data = active_games[request.gameId]
     correct_map = game_data["correct_answers"]
+    page_to_gap_ids = game_data["page_to_gap_ids"]
+    
+    user_answered_gap_ids = {ans.gapId for ans in request.answers}
     
     hits = 0
     for user_ans in request.answers:
         if correct_map.get(user_ans.gapId) == user_ans.optionId:
             hits += 1
+
+    pages_with_activity = 0
+    for p_idx, gap_ids in page_to_gap_ids.items():
+        if any(gid in user_answered_gap_ids for gid in gap_ids):
+            pages_with_activity += 1
 
     total_gaps = len(correct_map)
     accuracy = hits / total_gaps if total_gaps > 0 else 0
@@ -133,5 +147,5 @@ async def submit_choice_answers(request: ChoiceAnswerRequest):
         mistakes=max(0, total_gaps - hits),
         time=f"{sec // 60:02d}:{sec % 60:02d}",
         accuracy=accuracy,
-        pagesCompleted=game_data["pages_count"]
+        pagesCompleted=pages_with_activity
     )

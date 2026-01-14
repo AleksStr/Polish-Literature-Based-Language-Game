@@ -65,6 +65,7 @@ async def start_anagram_game(request: GameRequest, background_tasks: BackgroundT
         extract_path = f"extracts/book_{request.bookId}/chapter_{request.chapter}.txt"
         responses = []
         all_correct_word_ids = set()
+        page_to_ids = {}
         game_id = random.randint(1000, 9999)
         current_word_id = 1
         page_idx = 1
@@ -98,9 +99,10 @@ async def start_anagram_game(request: GameRequest, background_tasks: BackgroundT
                 current_word_id
             )
             
-            for anagram_id in page_anagram_ids:
-                all_correct_word_ids.add(anagram_id)
+            page_all_word_ids = {w["id"] for w in spellcheck_model["riddle"]["prompt"]["words"]}
+            page_to_ids[page_idx] = page_all_word_ids
             
+            all_correct_word_ids.update(page_anagram_ids)
             current_word_id = next_id
             
             riddle_words = [RiddleWord(id=w["id"], value=w["value"]) for w in spellcheck_model["riddle"]["prompt"]["words"]]
@@ -116,8 +118,9 @@ async def start_anagram_game(request: GameRequest, background_tasks: BackgroundT
 
         active_games[game_id] = {
             "correct_word_ids": all_correct_word_ids,
+            "page_to_ids": page_to_ids,
             "start_time": datetime.now(),
-            "pages_count": len(responses)
+            "total_pages": len(responses)
         }
 
         return responses
@@ -131,8 +134,14 @@ async def submit_anagram_answers(request: AnagramAnswerRequest):
     
     game_data = active_games[request.gameId]
     correct_ids = game_data["correct_word_ids"]
+    page_to_ids = game_data["page_to_ids"]
     submitted_ids = set(request.selectedWordIds)
     
+    pages_with_activity = 0
+    for p_idx, p_ids in page_to_ids.items():
+        if any(sid in p_ids for sid in submitted_ids):
+            pages_with_activity += 1
+            
     hits = len(submitted_ids.intersection(correct_ids))
     misses = len(submitted_ids - correct_ids)
     unfound = len(correct_ids - submitted_ids)
@@ -155,7 +164,7 @@ async def submit_anagram_answers(request: AnagramAnswerRequest):
         mistakes=total_mistakes,
         time=time_str,
         accuracy=accuracy,
-        pagesCompleted=game_data["pages_count"]
+        pagesCompleted=pages_with_activity
     )
 
 @router.get("/anagram/active")

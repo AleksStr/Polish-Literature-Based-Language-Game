@@ -1,11 +1,10 @@
 from fastapi import APIRouter, HTTPException, BackgroundTasks
-from typing import Dict, Any, List
+from typing import Dict, Any
 import random
 from datetime import datetime, timedelta
 import uuid
 
 from helpers import read_page, get_token_info2
-from word_token import Word_Token  
 from fill import transform_to_fill_model, pick_words_to_remove
 
 
@@ -77,6 +76,7 @@ async def start_fill_gaps_game(request: GameRequest, background_tasks: Backgroun
         
         all_pages_riddles = []
         correct_answers_state = {}
+        page_to_gaps = {} 
         global_gap_counter = 0
         page_idx = 1
 
@@ -100,14 +100,18 @@ async def start_fill_gaps_game(request: GameRequest, background_tasks: Backgroun
             
             game_data = transform_to_fill_model(page_content, word_tokens, words_to_remove)
             
+            # Track which gap indices are created on this specific page
+            current_page_gaps = []
             sorted_words = sorted(words_to_remove, key=lambda x: x.start)
             for i, word in enumerate(sorted_words):
                 for option in game_data["riddle"]["options"]:
                     if option["label"] == word.display_word:
                         correct_answers_state[global_gap_counter] = option["id"]
+                        current_page_gaps.append(global_gap_counter)
                         global_gap_counter += 1
                         break
 
+            page_to_gaps[page_idx] = current_page_gaps
             all_pages_riddles.append({
                 "gameId": game_id,
                 "riddle": game_data["riddle"]
@@ -118,7 +122,8 @@ async def start_fill_gaps_game(request: GameRequest, background_tasks: Backgroun
             "start_time": datetime.now(),
             "total_gaps": global_gap_counter,
             "correct_answers": correct_answers_state,
-            "pages_count": len(all_pages_riddles)
+            "page_to_gaps": page_to_gaps,
+            "total_pages": len(all_pages_riddles)
         }
 
         return all_pages_riddles
@@ -132,26 +137,41 @@ async def submit_fill_gaps_answers(request: FillGapsAnswerRequest):
         raise HTTPException(status_code=404, detail="Game not found")
     
     game_data = active_games[request.gameId]
+    page_to_gaps = game_data["page_to_gaps"]
     correct_count = 0
+    
+    # Track which gap indices the user actually provided an answer for
+    user_answered_indices = {answer.gapIndex for answer in request.answers}
     
     for answer in request.answers:
         if game_data["correct_answers"].get(answer.gapIndex) == answer.optionId:
             correct_count += 1
 
+    # Calculate pages completed (where at least one gap was answered)
+    pages_with_activity = 0
+    for p_idx, gap_indices in page_to_gaps.items():
+        if any(idx in user_answered_indices for idx in gap_indices):
+            pages_with_activity += 1
+
     total_gaps = game_data["total_gaps"]
     accuracy = correct_count / total_gaps if total_gaps > 0 else 0
     
-    delta = datetime.now() - game_data["start_time"]
-    time_str = f"{int(delta.total_seconds() // 60):02d}:{int(delta.total_seconds() % 60):02d}"
+    if request.elapsedTimeMs:
+        sec = request.elapsedTimeMs // 1000
+    else:
+        delta = datetime.now() - game_data["start_time"]
+        sec = int(delta.total_seconds())
+        
+    time_str = f"{sec // 60:02d}:{sec % 60:02d}"
     
     del active_games[request.gameId]
     
     return ResultResponse(
         score=int(accuracy * 100),
-        mistakes=total_gaps - correct_count,
+        mistakes=max(0, total_gaps - correct_count),
         time=time_str,
         accuracy=accuracy,
-        pagesCompleted=game_data["pages_count"]
+        pagesCompleted=pages_with_activity
     )
 
 @router.get("/fill-gaps/active")
