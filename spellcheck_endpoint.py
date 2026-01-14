@@ -55,55 +55,51 @@ def cleanup_expired_games():
 @router.post("/spellcheck/start", response_model=List[SpellcheckResponse])
 async def start_spellcheck_game(request: GameRequest, background_tasks: BackgroundTasks):
     background_tasks.add_task(cleanup_expired_games)
-    
     if request.gameType != 'spellcheck':
         raise HTTPException(status_code=400, detail="Invalid game type")
     
     try:
         extract_path = f"extracts/book_{request.bookId}/chapter_{request.chapter}.txt"
         game_id = random.randint(1000, 9999)
+        pages_with_typos = generate_level(extract_path)
         
         all_pages_responses = []
         all_typo_ids = set()
         page_to_ids = {}
-        
         current_word_id = 1
-        page_idx = 1
         
-        while True:
+        for page_idx, (masked_page, typo_data) in enumerate(pages_with_typos, 1):
             original_page = read_page(extract_path, page_idx)
-            if not original_page:
-                break
+            if not original_page: continue
                 
             word_tokens = get_token_info2(original_page)
-            if not word_tokens:
-                page_idx += 1
-                continue
+            if not word_tokens: continue
 
+            typos_with_positions = []
+            for correct_word, typo_word in typo_data:
+                for token in word_tokens:
+                    if token.original_text == correct_word:
+                        typos_with_positions.append((correct_word, typo_word, token.start))
+                        break
+
+            # FIX: Explicitly passing current_word_id as start_id
             spellcheck_model, next_id, page_typo_ids = transform_to_spellcheck_model(
-                original_page, 
+                masked_page, 
                 word_tokens, 
-                current_word_id
+                typos_with_positions,
+                current_word_id 
             )
             
-            page_ids = {w["id"] for w in spellcheck_model["riddle"]["prompt"]["words"]}
-            page_to_ids[page_idx] = page_ids
-            
+            p_ids = {w["id"] for w in spellcheck_model["riddle"]["prompt"]["words"]}
+            page_to_ids[page_idx] = p_ids
             all_typo_ids.update(page_typo_ids)
             current_word_id = next_id
             
             riddle_words = [RiddleWord(id=w["id"], value=w["value"]) for w in spellcheck_model["riddle"]["prompt"]["words"]]
-            
             all_pages_responses.append(SpellcheckResponse(
                 gameId=game_id,
-                riddle=SpellcheckRiddle(
-                    prompt=GameText(words=riddle_words)
-                )
+                riddle=SpellcheckRiddle(prompt=GameText(words=riddle_words))
             ))
-            page_idx += 1
-        
-        if not all_pages_responses:
-            raise HTTPException(status_code=404, detail="Content not found")
         
         active_games[game_id] = {
             "start_time": datetime.now(),
@@ -111,7 +107,6 @@ async def start_spellcheck_game(request: GameRequest, background_tasks: Backgrou
             "page_to_ids": page_to_ids,
             "total_pages": len(all_pages_responses)
         }
-        
         return all_pages_responses
         
     except Exception as e:

@@ -1,6 +1,6 @@
 import os
 
-folder_path = 'extracts/book_10'
+folder_path = 'extracts/book_9'
 output_file = os.path.join(folder_path, 'all_lines.txt')
 
 all_content = []

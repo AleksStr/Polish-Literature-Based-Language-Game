@@ -1,10 +1,10 @@
-1   Latarnik    Henryk Sienkiewicz  1881    Nowela  16
+1   Latarnik    Henryk Sienkiewicz  1881    Nowela  10
 2   Lokomotywa i inne wiersze dla dzieci    Julian Tuwim    1936    wiersze     15
-3   Awantura o Basię    Kornel Makuszyński      1937    powieść dla dzieci i młodziezy    153
-4   Granica      Zofia Nałkowska    1935    powieść obyczajowa    258
-5   Medaliony    Zofia Nałkowska    1946    opowiadanie     45
-6   Pan Tadeusz     Adam Mickiewicz     1864    epos    257
-7   Przedwiośnie    Stefan Żyromski     1924    powieść     261
-8   Quo vadis   Henryk Sienkiewicz      1896    powieść historyczna     554
-9   Szatan z Siódmej Klasy      Kornel Makuszyński      1937    powieść dla dzieci i młodziezy      217
-10  W pustyni i w puszczy       Henryk Sienkiewicz      1911    powieść dla dzieci i młodziezy      343
+3   Awantura o Basię    Kornel Makuszyński      1937    powieść dla dzieci i młodziezy    141
+4   Granica      Zofia Nałkowska    1935    powieść obyczajowa    235
+5   Medaliony    Zofia Nałkowska    1946    opowiadanie     44
+6   Pan Tadeusz     Adam Mickiewicz     1864    epos    220
+7   Przedwiośnie    Stefan Żyromski     1924    powieść     221
+8   Quo vadis   Henryk Sienkiewicz      1896    powieść historyczna     479
+9   Szatan z Siódmej Klasy      Kornel Makuszyński      1937    powieść dla dzieci i młodziezy      204
+10  W pustyni i w puszczy       Henryk Sienkiewicz      1911    powieść dla dzieci i młodziezy      302
