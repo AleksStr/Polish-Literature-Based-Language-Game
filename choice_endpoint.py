@@ -79,7 +79,7 @@ async def start_choice_game(request: GameRequest):
                 page_idx += 1
                 continue
 
-            max_to_mask = min(len(word_tokens), 8)
+            max_to_mask = min(len(word_tokens), 3)
             chosen_indices = set(random.sample(range(len(word_tokens)), random.randint(3, max_to_mask)))
             
             page_data = transform_to_choice_model(page_content, word_tokens, chosen_indices)

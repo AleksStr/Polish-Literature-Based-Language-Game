@@ -82,7 +82,7 @@ async def start_spellcheck_game(request: GameRequest, background_tasks: Backgrou
                         typos_with_positions.append((correct_word, typo_word, token.start))
                         break
 
-            # FIX: Explicitly passing current_word_id as start_id
+
             spellcheck_model, next_id, page_typo_ids = transform_to_spellcheck_model(
                 masked_page, 
                 word_tokens, 

@@ -95,12 +95,12 @@ async def start_fill_gaps_game(request: GameRequest, background_tasks: Backgroun
                 if not hasattr(t, 'display_word'):
                     t.display_word = t.original_text.lower()
 
-            n_words = min(random.randint(3,8), len(word_tokens))
+            n_words = min(random.randint(3,3), len(word_tokens))
             words_to_remove = pick_words_to_remove(word_tokens, n_words)
             
             game_data = transform_to_fill_model(page_content, word_tokens, words_to_remove)
             
-            # Track which gap indices are created on this specific page
+
             current_page_gaps = []
             sorted_words = sorted(words_to_remove, key=lambda x: x.start)
             for i, word in enumerate(sorted_words):
@@ -140,14 +140,13 @@ async def submit_fill_gaps_answers(request: FillGapsAnswerRequest):
     page_to_gaps = game_data["page_to_gaps"]
     correct_count = 0
     
-    # Track which gap indices the user actually provided an answer for
+
     user_answered_indices = {answer.gapIndex for answer in request.answers}
     
     for answer in request.answers:
         if game_data["correct_answers"].get(answer.gapIndex) == answer.optionId:
             correct_count += 1
 
-    # Calculate pages completed (where at least one gap was answered)
     pages_with_activity = 0
     for p_idx, gap_indices in page_to_gaps.items():
         if any(idx in user_answered_indices for idx in gap_indices):

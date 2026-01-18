@@ -3,8 +3,8 @@ import os
 from helpers import read_page
 import uuid
 
-MIN_EXTRA_LINES = 2
-MAX_EXTRA_LINES = 5
+MIN_EXTRA_LINES = 1
+MAX_EXTRA_LINES = 3
 '''
 COLOR_START = "\033[91m"
 COLOR_RESET = "\033[0m"

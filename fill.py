@@ -4,7 +4,7 @@ from typing import List, Tuple, Dict, Any
 import uuid
 
 MIN_WORDS = 3
-MAX_WORDS = 8
+MAX_WORDS = 3
 '''
 COLOR_START = "\033[91m"
 COLOR_RESET = "\033[0m"
