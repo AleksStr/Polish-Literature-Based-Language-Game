@@ -5,8 +5,8 @@ from typing import List, Tuple, Dict, Any, Set, Optional
 import uuid
 
 
-MIN_WORDS = 3
-MAX_WORDS = 3
+MIN_WORDS = 1
+MAX_WORDS = 1
 '''
 COLOR_START = "\033[91m"
 COLOR_RESET = "\033[0m"

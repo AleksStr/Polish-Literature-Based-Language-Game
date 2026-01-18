@@ -95,7 +95,7 @@ async def start_fill_gaps_game(request: GameRequest, background_tasks: Backgroun
                 if not hasattr(t, 'display_word'):
                     t.display_word = t.original_text.lower()
 
-            n_words = min(random.randint(1,1), len(word_tokens))
+            n_words = min(random.randint(2,2), len(word_tokens))
             words_to_remove = pick_words_to_remove(word_tokens, n_words)
             
             game_data = transform_to_fill_model(page_content, word_tokens, words_to_remove)

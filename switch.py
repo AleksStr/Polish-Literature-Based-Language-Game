@@ -2,8 +2,8 @@ from helpers import read_page, is_punctuation
 import random
 from typing import List, Tuple, Dict, Any
 
-MIN_PAIRS = 3
-MAX_PAIRS = 3
+MIN_PAIRS = 1
+MAX_PAIRS = 1
 
 COLOR_START = ""
 COLOR_RESET = ""

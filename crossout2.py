@@ -4,7 +4,7 @@ import os
 from helpers import read_page
 
 MIN_EXTRA_LINES = 2
-MAX_EXTRA_LINES = 5
+MAX_EXTRA_LINES = 2
 
 def load_line_pool(extract_path):
     folder = os.path.dirname(extract_path)
