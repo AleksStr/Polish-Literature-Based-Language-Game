@@ -92,7 +92,8 @@ async def start_spellcheck_game(request: GameRequest, background_tasks: Backgrou
                 masked_page, 
                 word_tokens, 
                 typos_with_positions,
-                current_word_id 
+                current_word_id,
+                game_id 
             )
             
             p_ids = {w["id"] for w in spellcheck_model["riddle"]["prompt"]["words"]}

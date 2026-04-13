@@ -10,7 +10,7 @@ Run as main to get plain text of spellcheck riddle in console from extract FILE_
 Extract path (relative) can be passed as argument
 
 '''
-MIN_WORDS = 5
+MIN_WORDS = 2
 MAX_WORDS = 5
 FILE_PATH = "extracts/book_2/chapter_1.txt"
 
@@ -27,19 +27,39 @@ MIN_WORD_LENGTH_FOR_TYPO = 3
 
 def swap_adjacent_letters(word: str) -> str:
     ''' swaps places of a randomly chosen letter and the one directly behind it, 
-    already considering words with double letters like for example"inny"'''
-    word = list(word)
-    if len(word) < 2:
-        return "".join(word)
-    old_word = "".join(word)
-    new_word = "".join(word)
-    while old_word==new_word:  
-        swap_index = random.randint(0, len(word) - 2)
-        word[swap_index], word[swap_index + 1] = word[swap_index + 1], word[swap_index]
-        new_word = "".join(word)
-
-        if len(set(word))==1:
+    already considering words with double letters like for example "inny"'''
+    word_list = list(word)
+    if len(word_list) < 2:
+        return "".join(word_list)
+    
+    old_word = "".join(word_list)
+    new_word = old_word
+    
+    while old_word == new_word:
+        if len(set(word_list.lower() if hasattr(word_list, 'lower') else [c.lower() for c in word_list])) == 1:
             break
+            
+        swap_index = random.randint(0, len(word_list) - 2)
+        idx1, idx2 = swap_index, swap_index + 1
+        
+        is_upper1 = word_list[idx1].isupper()
+        is_upper2 = word_list[idx2].isupper()
+        
+
+        word_list[idx1], word_list[idx2] = word_list[idx2], word_list[idx1]
+        
+        if is_upper1:
+            word_list[idx1] = word_list[idx1].upper()
+        else:
+            word_list[idx1] = word_list[idx1].lower()
+            
+        if is_upper2:
+            word_list[idx2] = word_list[idx2].upper()
+        else:
+            word_list[idx2] = word_list[idx2].lower()
+            
+        new_word = "".join(word_list)
+        
     return new_word
 
 
@@ -58,8 +78,7 @@ def change_u(word: str) -> str:
 
 
 def change_rz(word: str) -> str:
-    ''' changes a randomly chosen rz/ż into the other one'''
-    replacements = {'rz': 'ż', 'ż': 'rz', 'Rz': 'Ż', 'Ż': 'Rz', 'RZ': 'Ż'}
+    ''' changes a randomly chosen rz/ż into the other one keeping correct casing '''
 
     indices_rz = [m.start() for m in re.finditer('rz', word.lower())]
     indices_z = [m.start() for m in re.finditer('ż', word.lower())]
@@ -69,38 +88,50 @@ def change_rz(word: str) -> str:
         return word
     
     char_index = random.choice(indices)
-    original_char = word[char_index]
-    if original_char.lower() == 'r':
-
-        return word[:char_index] + replacements[word[char_index:(char_index+2)]] + word[char_index+2:]
+    
+    if word[char_index].lower() == 'r':
+        res = "Ż" if word[char_index].isupper() else "ż"
+        return word[:char_index] + res + word[char_index+2:]
+    
     else:
-        if original_char == "Ż" and word[char_index+1].isupper():
-            return word[:char_index] + "RZ" + word[char_index+1:]
+        original_h = word[char_index]
+        if original_h.isupper():
+            is_all_caps = (char_index + 1 < len(word) and word[char_index+1].isupper())
+            res = "RZ" if is_all_caps else "Rz"
         else:
-            return word[:char_index] + replacements[original_char] + word[char_index+1:]
+            res = "rz"
+            
+        return word[:char_index] + res + word[char_index+1:]
         
 
 def change_ch(word: str) -> str:
-    ''' changes a randomly chosen ch/h into the other one'''
-    replacements = {'ch': 'h', 'h': 'ch', 'Ch': 'H', 'H': 'Ch', 'CH': 'H'}
+    ''' changes a randomly chosen ch/h into the other one keeping correct casing '''
 
-    indices_rz = [m.start() for m in re.finditer('ch', word.lower())]
-    indices_z = [m.start() for m in re.finditer('h', word.lower())]
-    indices = indices_rz + indices_z
+
+    indices_ch = [m.start() for m in re.finditer('ch', word.lower())]
+    indices_h = [m.start() for m in re.finditer('h', word.lower()) if m.start() == 0 or word[m.start()-1].lower() != 'c']
+    indices = indices_ch + indices_h
 
     if not indices:
         return word
     
     char_index = random.choice(indices)
-    original_char = word[char_index]
-    if original_char.lower() == 'c':
+    
 
-        return word[:char_index] + replacements[word[char_index:(char_index+2)]] + word[char_index+2:]
+    if word[char_index].lower() == 'c':
+        res = "H" if word[char_index].isupper() else "h"
+        return word[:char_index] + res + word[char_index+2:]
+    
+
     else:
-        if original_char == "H" and word[char_index+1].isupper():
-            return word[:char_index] + "CH" + word[char_index+1:]
+        original_h = word[char_index]
+        if original_h.isupper():
+            is_all_caps = (char_index + 1 < len(word) and word[char_index+1].isupper())
+            res = "CH" if is_all_caps else "Ch"
         else:
-            return word[:char_index] + replacements[original_char] + word[char_index+1:]
+            res = "ch"
+            
+        return word[:char_index] + res + word[char_index+1:]
 
 
 def generate_typo_distractor(correct_word: str) -> str:
