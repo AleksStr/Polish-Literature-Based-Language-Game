@@ -1,7 +1,7 @@
 import string
 import sys
 sys.path.append('.')
-from helpers import read_page, get_token_info, get_token_info2, is_punctuation
+from helpers import read_page, get_token_info, get_token_info_basic, is_punctuation
 
 import pytest
 
@@ -17,8 +17,8 @@ def test_read_page():
     assert result2 == expected2
     assert result10 == expected10
 
-def test_get_token_info2():
-    word_tokens = get_token_info2("Litwo, Ojczyzno ty Moja!")
+def test_get_token_info_basic():
+    word_tokens = get_token_info_basic("Litwo, Ojczyzno ty Moja!")
     assert len(word_tokens) == 4
     assert word_tokens[1].original_text == "Ojczyzno"
     assert word_tokens[1].start == 7

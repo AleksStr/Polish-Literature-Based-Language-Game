@@ -1,12 +1,19 @@
-from helpers import read_page, get_token_info2
+from helpers import read_page, get_token_info_basic
 import random
 import spacy
 from word_token import Word_Token
 from typing import List, Tuple, Dict, Any
+import sys
 import uuid
 
-MIN_WORDS = 1
-MAX_WORDS = 1
+'''This module handles anagram type riddles
+Running as main results in the text of the riddle being printed in the console
+Pass extract path (relative) as argument'''
+FILE_PATH = "extracts/book_2/chapter_1.txt"
+MIN_WORDS = 4
+MAX_WORDS = 4
+
+# this can be uncommented for visuals but would need to be commented again for code to run as app
 '''
 COLOR_START = "\033[91m"
 COLOR_RESET = "\033[0m"
@@ -15,6 +22,7 @@ COLOR_START = ""
 COLOR_RESET = ""
 
 def get_anagram(word: str) -> str:
+    ''' this function shuffles a word until an anagram is made'''
     if len(word) <= 1:
         return word
     
@@ -22,7 +30,7 @@ def get_anagram(word: str) -> str:
     shuffled_letters = original_letters[:]
     anagram = word
     
-    max_attempts = 100  
+    max_attempts = 10 
     attempts = 0
     
     while anagram == word and attempts < max_attempts:
@@ -33,7 +41,8 @@ def get_anagram(word: str) -> str:
     return anagram.lower()
 
 def generate_riddle(page: str):
-    word_tokens = get_token_info2(page) 
+    ''' generates a single page of anagram riddle'''
+    word_tokens = get_token_info_basic(page) 
     
     if not word_tokens:
         return page, []
@@ -78,6 +87,7 @@ def generate_riddle(page: str):
     return anagrammed_page, masked_words_in_order
 
 def generate_level(extract_path: str):
+    ''' generates full riddle'''
     pages=[]
     words = []
     count = 1
@@ -92,7 +102,8 @@ def generate_level(extract_path: str):
     return pages, words
 
 
-def transform_to_model(page_text: str, all_tokens: List, masked_metadata: List, start_id: int) -> Tuple[Dict[str, Any], int, List[str]]:
+def transform_to_model(page_text: str, all_tokens: List, masked_metadata: List, start_id: int, game_id: int) -> Tuple[Dict[str, Any], int, List[str]]:
+    ''' transform into model used by endpoints'''
     words_list = []
     current_id = start_id
     anagram_ids = []
@@ -129,7 +140,7 @@ def transform_to_model(page_text: str, all_tokens: List, masked_metadata: List, 
             current_id += 1
             
     return {
-        "gameId": random.randint(1000, 9999),
+        "gameId": game_id,
         "riddle": {
             "prompt": {
                 "words": words_list
@@ -138,7 +149,10 @@ def transform_to_model(page_text: str, all_tokens: List, masked_metadata: List, 
     }, current_id, anagram_ids
 
 if __name__ == "__main__":
-    pages, words = generate_level("extracts/book_1/chapter_2.txt")
+    extract_file_path = FILE_PATH
+    if len(sys.argv) > 1:
+        extract_file_path = sys.argv[1]
+    pages, words = generate_level(extract_file_path)
     
     for page, word_list in zip(pages, words):
         print("\n| Next Page |\n")

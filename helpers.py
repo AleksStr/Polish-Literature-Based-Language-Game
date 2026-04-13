@@ -39,7 +39,7 @@ def get_token_info(text):
             word_tokens.append(Word_Token_Detailed(word, token.idx, token.idx+len(word), token.i, token.morph, token.pos))
     return word_tokens
 
-def get_token_info2(text:str):
+def get_token_info_basic(text:str):
     doc = NLP(text)
     word_tokens = []
     for token in doc:

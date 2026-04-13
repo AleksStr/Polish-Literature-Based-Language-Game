@@ -1,85 +1,82 @@
+
 import random
 import os
 from helpers import read_page
-import uuid
+import sys
 
-MIN_EXTRA_LINES = 1
-MAX_EXTRA_LINES = 3
+MIN_EXTRA_LINES = 2
+MAX_EXTRA_LINES = 2
+
+'''This module handles generating riddles of crossout type
+It uses special .txt files that hold all lines of a book
+This module can be run in command line by passing relative path to extract as argument
 '''
-COLOR_START = "\033[91m"
-COLOR_RESET = "\033[0m"
-'''
-COLOR_START = ""
-COLOR_RESET = ""
+FILE_PATH = "extracts/book_2/chapter_1.txt"
 
-def check_if_allowed(extract_path):
+def load_line_pool(extract_path):
+    '''loads a file that has all the lines'''
     folder = os.path.dirname(extract_path)
-    contents = os.listdir(folder)
-    if len(contents) == 1:
-        print(f"Only one item: {contents[0]}")
-        return 0
-    return 1
-
-def put_extra_line(page, extra):    
-    lines = page.split("\n")
-    if extra.strip() in page:
-        print("Warning: This line exist on this page")
-        return page
-    if lines and lines[-1] == '':
-        lines.pop()
-
-    extra_index = random.randint(0, len(lines))
-    colored_extra = COLOR_START + extra.strip() + COLOR_RESET
+    pool_path = os.path.join(folder, "all_lines.txt")
     
-    lines.insert(extra_index, colored_extra)
-    
-    return "\n".join(lines)
-
-
-def get_random_line_from_extract(extra_extract_path):
-    with open(extra_extract_path, 'r', encoding='utf-8') as extra_extract_file:
-        extra_line=""
-        lines = extra_extract_file.readlines()
-        while(extra_line.strip()=="" or "| Page " in extra_line):
-            extra_line =random.choice(lines)
-    return extra_line
-
-def get_random_extract(extract_path):
-    folder = os.path.dirname(extract_path)
-    random_extract = extract_path
-    while random_extract == extract_path:
-        random_extract = random.choice(os.listdir(folder)) 
-    return os.path.join(folder, random_extract)
-
-
-def generate_riddle(page, extract_path):
-    if not check_if_allowed:
-        return 0
-    extra_count = random.randint(MIN_EXTRA_LINES, MAX_EXTRA_LINES)
-    riddle = page
-    for i in range(0,extra_count):
-        random_path = get_random_extract(extract_path)
-        extra_line = get_random_line_from_extract(random_path) 
+    if not os.path.exists(pool_path):
+        return []
         
-        riddle = put_extra_line(riddle, extra_line)
-    return riddle
+    with open(pool_path, 'r', encoding='utf-8') as f:
+        pool = [line.strip() for line in f if line.strip() and "| Page " not in line]
+    return pool
+
+def get_lines_from_extract(extract_path):
+    '''this gets all lines from this specific extract'''
+    with open(extract_path, 'r', encoding='utf-8') as f:
+        lines = [line.strip() for line in f if line.strip() and "| Page " not in line]
+    return lines
+
+def generate_riddle(page_content, extract_path):
+    '''gets a random line and puts it in a random position'''
+    line_pool = load_line_pool(extract_path)
+    original_lines = [l.strip() for l in page_content.split("\n") if l.strip()]
+
+    all_extract_lines = get_lines_from_extract(extract_path)
+    filtered_pool = [l for l in line_pool if l not in all_extract_lines]
+    
+    if not filtered_pool or not original_lines:
+        return page_content
+
+    extra_count = random.randint(MIN_EXTRA_LINES, MAX_EXTRA_LINES)
+    selected_extras = random.sample(filtered_pool, min(extra_count, len(filtered_pool)))
+
+    
+    riddle_lines = list(original_lines)
+    
+    for extra in selected_extras:
+        insert_pos = random.randint(1, len(riddle_lines))
+        riddle_lines.insert(insert_pos, extra)
+        
+    return "\n".join(riddle_lines)
+
 
 def generate_level(extract_path):
+    ''' this generates entire riddle'''
     pages = []
     count = 1
-    while read_page(extract_path, count):
-        pages.append(generate_riddle(read_page(extract_path, count), extract_path))
+    while True:
+        content = read_page(extract_path, count)
+        if not content:
+            break
+        pages.append(generate_riddle(content, extract_path))
         count += 1
     return pages
 
-
 def transform_to_crossout_model(riddle_text: str):
-    raw_lines = riddle_text.split("\n")
-    return [line.strip() for line in raw_lines if line.strip()]
-
+    if isinstance(riddle_text, list):
+        return [line.strip() for line in riddle_text if line.strip()]
+    return [line.strip() for line in riddle_text.split("\n") if line.strip()]
 
 if __name__ == "__main__":
-    pages = generate_level("extracts/Zwierciadlana zagadka/Zwierciadlana zagadka_part_1.txt")
+    path = FILE_PATH
+    if len(sys.argv) > 1:
+        path = sys.argv[1]
+    pages = generate_level(path)
     for page in pages:
         print("| NEXT PAGE |\n")
         print(page)

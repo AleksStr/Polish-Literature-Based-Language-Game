@@ -1,14 +1,23 @@
 from helpers import read_page, is_punctuation
 import random
-from typing import List, Tuple, Dict, Any
+from typing import List, Dict, Any
+import sys
 
-MIN_PAIRS = 1
-MAX_PAIRS = 1
+
+''' This module handles logic for SWITCH type riddles
+It can be run as main passing relative path to extract as argument to print a riddle in console
+
+'''
+FILE_PATH = "extracts/book_2/chapter_1.txt"
+MIN_PAIRS = 3
+MAX_PAIRS = 5
 
 COLOR_START = ""
 COLOR_RESET = ""
 
 def merge_parts_with_punctuation(parts: List[str]) -> List[str]:
+    '''merges a word with standalone punctuations and "-"'''
+
     merged = []
     buffer = ""
     for p in parts:
@@ -25,6 +34,7 @@ def merge_parts_with_punctuation(parts: List[str]) -> List[str]:
     return merged
 
 def switch_word_riddle(page, swapped_word):
+    '''swaps a position of 2 consecutive words'''
     lines = page.split("\n")
     content_lines_indices = [i for i, line in enumerate(lines) if line.strip()]
     
@@ -59,6 +69,7 @@ def switch_word_riddle(page, swapped_word):
     return "\n".join(lines), (line_index, swap_index)
 
 def select_swap_index(valid_pairs, line_index, swapped_word):
+    '''selects an index for word to be swapped, making sure none of words were already swapped'''
     if not valid_pairs:
         return None
     
@@ -71,6 +82,7 @@ def select_swap_index(valid_pairs, line_index, swapped_word):
     return None
 
 def generate_riddle(page):
+    '''generates a singular page of riddle'''
     riddle = page
     swapped_words = []
     for _ in range(MIN_PAIRS):
@@ -81,6 +93,7 @@ def generate_riddle(page):
     return riddle
 
 def generate_level(extract_path):
+    '''generates a level'''
     pages = []
     count = 1
     while True:
@@ -92,8 +105,8 @@ def generate_level(extract_path):
     return pages
 
 def transform_to_switch_model(page_content: str, word_tokens: List, starting_id: int) -> Dict[str, Any]:
+
     riddle_text = generate_riddle(page_content)
-    
     og_lines = page_content.split('\n')
     rid_lines = riddle_text.split('\n')
     
@@ -129,7 +142,10 @@ def transform_to_switch_model(page_content: str, word_tokens: List, starting_id:
     }
 
 if __name__ == "__main__":
-    pages = generate_level("extracts/book_2/chapter_1.txt")
+    extract_file_path = FILE_PATH
+    if len(sys.argv) > 1:
+        extract_file_path = sys.argv[1]
+    pages = generate_level(extract_file_path)
     for page in pages:
         print("| NEXT PAGE |\n")
         print(page)

@@ -4,8 +4,8 @@ import random
 from datetime import datetime, timedelta
 import uuid
 
-from helpers import read_page, get_token_info2
-from fill import transform_to_fill_model, pick_words_to_remove
+from helpers import read_page
+from fill import transform_to_fill_model, generate_level
 
 
 from typing import Optional
@@ -72,7 +72,10 @@ async def start_fill_gaps_game(request: GameRequest, background_tasks: Backgroun
     
     try:
         extract_path = f"extracts/book_{request.bookId}/chapter_{request.chapter}.txt"
+                
         game_id = random.randint(1000, 9999)
+        while (game_id in active_games):
+            game_id = random.randint(1000, 9999)
         
         all_pages_riddles = []
         correct_answers_state = {}
@@ -85,18 +88,17 @@ async def start_fill_gaps_game(request: GameRequest, background_tasks: Backgroun
             if not page_content:
                 break
             
-            word_tokens_data = get_token_info2(page_content)
-            if not word_tokens_data:
+            word_tokens, words_to_remove = generate_level(page_content)
+            if not word_tokens:
                 page_idx += 1
                 continue
 
-            word_tokens = [t for t in word_tokens_data]
+
             for t in word_tokens:
                 if not hasattr(t, 'display_word'):
                     t.display_word = t.original_text.lower()
 
-            n_words = min(random.randint(2,2), len(word_tokens))
-            words_to_remove = pick_words_to_remove(word_tokens, n_words)
+            
             
             game_data = transform_to_fill_model(page_content, word_tokens, words_to_remove)
             

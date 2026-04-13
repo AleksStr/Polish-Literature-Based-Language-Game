@@ -5,8 +5,9 @@ from datetime import datetime, timedelta
 import random
 
 from helpers import read_page
-from crossout2 import generate_riddle, transform_to_crossout_model
+from crossout import generate_riddle, transform_to_crossout_model
 
+'''This module is responsible for managing endpoints for crossout type riddles'''
 class GameRequest(BaseModel):
     bookId: int
     gameType: str
@@ -40,6 +41,7 @@ router = APIRouter(prefix="/games", tags=["crossout"])
 active_games: Dict[int, Dict[str, Any]] = {}
 
 def cleanup_expired_games():
+    '''removes games that were open for over an hour'''
     now = datetime.now()
     expired_ids = [
         gid for gid, data in active_games.items()
@@ -51,6 +53,7 @@ def cleanup_expired_games():
 
 @router.post("/crossout/start", response_model=List[CrossoutResponse])
 async def start_crossout_game(request: GameRequest, background_tasks: BackgroundTasks):
+    ''' posts a crossout type riddle'''
     background_tasks.add_task(cleanup_expired_games)
     
     if request.gameType != 'crossout':
@@ -63,6 +66,8 @@ async def start_crossout_game(request: GameRequest, background_tasks: Background
         
         page_idx = 1
         shared_game_id = random.randint(1000, 9999)
+        while (shared_game_id in active_games):
+            shared_game_id = random.randint(1000, 9999)
         line_id_counter = 1 
 
         while True:
@@ -113,6 +118,7 @@ async def start_crossout_game(request: GameRequest, background_tasks: Background
 
 @router.post("/crossout/submit", response_model=ResultResponse)
 async def submit_crossout_answers(request: CrossoutAnswerRequest):
+    '''checks riddles solution'''
     if request.gameId not in active_games:
         raise HTTPException(status_code=404, detail="Game session not found")
     

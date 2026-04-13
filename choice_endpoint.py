@@ -2,7 +2,6 @@ from fastapi import APIRouter, HTTPException
 from typing import Dict, Any, List, Optional, Union
 from pydantic import BaseModel, Field
 from datetime import datetime
-import uuid
 import random
 
 from helpers import read_page, get_token_info
@@ -64,6 +63,8 @@ async def start_choice_game(request: GameRequest):
     try:
         extract_path = f"extracts/book_{request.bookId}/chapter_{request.chapter}.txt"
         game_id = random.randint(1000, 9999)
+        while (game_id in active_games):
+            game_id = random.randint(1000, 9999)
         all_pages_responses = []
         correct_answers_state = {}
         page_to_gap_ids = {}

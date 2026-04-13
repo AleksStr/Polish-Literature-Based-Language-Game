@@ -2,11 +2,12 @@ from fastapi import APIRouter, BackgroundTasks, HTTPException
 from typing import Dict, Any, List, Optional
 from pydantic import BaseModel
 from datetime import datetime, timedelta
-import uuid
 import random
 
-from helpers import read_page, get_token_info2
+from helpers import read_page, get_token_info_basic
 from anagram import generate_riddle, transform_to_model
+
+''' module responsible for endpoints for anagram riddles'''
 
 class GameRequest(BaseModel):
     bookId: int
@@ -45,6 +46,7 @@ active_games: Dict[int, Dict[str, Any]] = {}
 
 
 def cleanup_expired_games():
+    '''cleans up games older than 1h'''
     now = datetime.now()
     expired_ids = [
         gid for gid, data in active_games.items()
@@ -57,6 +59,7 @@ def cleanup_expired_games():
 
 @router.post("/anagram/start", response_model=List[AnagramResponse])
 async def start_anagram_game(request: GameRequest, background_tasks: BackgroundTasks):
+    '''posts the riddle'''
     background_tasks.add_task(cleanup_expired_games)
     if request.gameType != 'anagram':
         raise HTTPException(status_code=400, detail="Invalid game type")
@@ -66,7 +69,10 @@ async def start_anagram_game(request: GameRequest, background_tasks: BackgroundT
         responses = []
         all_correct_word_ids = set()
         page_to_ids = {}
+
         game_id = random.randint(1000, 9999)
+        while (game_id in active_games):
+            game_id = random.randint(1000, 9999)
         current_word_id = 1
         page_idx = 1
 
@@ -80,7 +86,7 @@ async def start_anagram_game(request: GameRequest, background_tasks: BackgroundT
                 page_idx += 1
                 continue
 
-            tokens = get_token_info2(page_content)
+            tokens = get_token_info_basic(page_content)
             if not tokens:
                 page_idx += 1
                 continue
@@ -88,7 +94,7 @@ async def start_anagram_game(request: GameRequest, background_tasks: BackgroundT
             masked_metadata = []
             for i, token in enumerate(tokens):
                 for masked_word in masked_words:
-                    if token.original_text == masked_word.original_text:
+                    if token.i == masked_word.i:
                         masked_metadata.append((i, masked_word))
                         break
             
@@ -96,7 +102,8 @@ async def start_anagram_game(request: GameRequest, background_tasks: BackgroundT
                 anagrammed_page,
                 tokens,
                 masked_metadata,
-                current_word_id
+                current_word_id,
+                game_id
             )
             
             page_all_word_ids = {w["id"] for w in spellcheck_model["riddle"]["prompt"]["words"]}
@@ -129,6 +136,7 @@ async def start_anagram_game(request: GameRequest, background_tasks: BackgroundT
 
 @router.post("/anagram/submit", response_model=ResultResponse)
 async def submit_anagram_answers(request: AnagramAnswerRequest):
+    '''checks answers'''
     if request.gameId not in active_games:
         raise HTTPException(status_code=404, detail="Game not found")
     
@@ -169,6 +177,7 @@ async def submit_anagram_answers(request: AnagramAnswerRequest):
 
 @router.get("/anagram/active")
 async def get_active_anagram_games():
+    '''list of active games, for testing purposes'''
     games_debug = {}
     for gid, data in active_games.items():
         games_debug[gid] = {

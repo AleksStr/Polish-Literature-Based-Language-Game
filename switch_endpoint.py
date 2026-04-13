@@ -4,7 +4,7 @@ from pydantic import BaseModel
 from datetime import datetime, timedelta
 import random
 
-from helpers import read_page, get_token_info2
+from helpers import read_page, get_token_info_basic
 from switch import transform_to_switch_model
 
 class GameRequest(BaseModel):
@@ -64,6 +64,8 @@ async def start_switch_game(request: GameRequest, background_tasks: BackgroundTa
     try:
         extract_path = f"extracts/book_{request.bookId}/chapter_{request.chapter}.txt"
         game_id = random.randint(1000, 9999)
+        while (game_id in active_games):
+            game_id = random.randint(1000, 9999)
         all_pages_responses = []
         all_correct_swapped_ids = set()
         
@@ -77,7 +79,7 @@ async def start_switch_game(request: GameRequest, background_tasks: BackgroundTa
             if not page_content:
                 break
             
-            word_tokens = get_token_info2(page_content)
+            word_tokens = get_token_info_basic(page_content)
             if not word_tokens:
                 page_idx += 1
                 continue

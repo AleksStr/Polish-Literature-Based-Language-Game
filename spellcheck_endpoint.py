@@ -2,11 +2,12 @@ from fastapi import APIRouter, BackgroundTasks, HTTPException
 from typing import Dict, Any, List, Optional
 from pydantic import BaseModel
 from datetime import datetime, timedelta
-import uuid
 import random
 
-from helpers import read_page, get_token_info2
+from helpers import read_page, get_token_info_basic
 from spellcheck import generate_level, transform_to_spellcheck_model
+
+'''this module handles endpoints responsible for spellcheck riddle'''
 
 class GameRequest(BaseModel):
     bookId: int
@@ -44,6 +45,7 @@ router = APIRouter(prefix="/games", tags=["spellcheck"])
 active_games: Dict[int, Dict[str, Any]] = {}
 
 def cleanup_expired_games():
+    ''' cleans games that have been active for over an hour'''
     now = datetime.now()
     expired_ids = [
         gid for gid, data in active_games.items()
@@ -54,6 +56,7 @@ def cleanup_expired_games():
 
 @router.post("/spellcheck/start", response_model=List[SpellcheckResponse])
 async def start_spellcheck_game(request: GameRequest, background_tasks: BackgroundTasks):
+    ''' generates a spellcheck riddle of a specific extract'''
     background_tasks.add_task(cleanup_expired_games)
     if request.gameType != 'spellcheck':
         raise HTTPException(status_code=400, detail="Invalid game type")
@@ -61,6 +64,8 @@ async def start_spellcheck_game(request: GameRequest, background_tasks: Backgrou
     try:
         extract_path = f"extracts/book_{request.bookId}/chapter_{request.chapter}.txt"
         game_id = random.randint(1000, 9999)
+        while (game_id in active_games):
+            game_id = random.randint(1000, 9999)
         pages_with_typos = generate_level(extract_path)
         
         all_pages_responses = []
@@ -72,13 +77,13 @@ async def start_spellcheck_game(request: GameRequest, background_tasks: Backgrou
             original_page = read_page(extract_path, page_idx)
             if not original_page: continue
                 
-            word_tokens = get_token_info2(original_page)
+            word_tokens = get_token_info_basic(original_page)
             if not word_tokens: continue
 
             typos_with_positions = []
             for correct_word, typo_word in typo_data:
                 for token in word_tokens:
-                    if token.original_text == correct_word:
+                    if token.original_text == correct_word and not token.original_text == typo_word:
                         typos_with_positions.append((correct_word, typo_word, token.start))
                         break
 
@@ -114,6 +119,7 @@ async def start_spellcheck_game(request: GameRequest, background_tasks: Backgrou
 
 @router.post("/spellcheck/submit", response_model=ResultResponse)
 async def submit_spellcheck_answers(request: SpellcheckAnswerRequest):
+    ''' checks solution '''
     if request.gameId not in active_games:
         raise HTTPException(status_code=404, detail="Game not found")
     
@@ -152,6 +158,7 @@ async def submit_spellcheck_answers(request: SpellcheckAnswerRequest):
 
 @router.get("/spellcheck/active")
 async def get_active_games():
+    ''' this gives an endpoint to see all active games of spellcheck type'''
 
     return {
         "active_games_count": len(active_games),

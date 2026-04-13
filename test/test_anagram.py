@@ -44,7 +44,7 @@ def test_generate_riddle_has_no_switches(monkeypatch):
         mock_tokens.append(token)
         current_pos += len(word) + 1
     
-    with patch('anagram.get_token_info2', return_value=mock_tokens):
+    with patch('anagram.get_token_info_basic', return_value=mock_tokens):
         with patch('anagram.get_anagram') as mock_anagram:
             def mock_get_anagram(word):
                 if len(word) <= 1:
@@ -90,7 +90,7 @@ def test_generate_riddle_makes_correct_anagrams(monkeypatch):
         mock_tokens.append(token)
         current_pos += len(word) + 1
     
-    with patch('anagram.get_token_info2', return_value=mock_tokens):
+    with patch('anagram.get_token_info_basic', return_value=mock_tokens):
         with patch('anagram.get_anagram') as mock_anagram:
             def mock_get_anagram(word):
                 return word[::-1]
