@@ -83,7 +83,7 @@ def generate_level_for_printing(extract_path: str) -> List[Tuple[str, List[str]]
         count += 1
     return pages_and_words
 
-def transform_to_fill_model(page_text: str, word_tokens: List, words_to_remove: List) -> Dict[str, Any]:
+def transform_to_fill_model(page_text: str, word_tokens: List, words_to_remove: List, game_id: int) -> Dict[str, Any]:
     ''' tranforms riddle to the form accepted by endpoints'''
     parts = []
     options = []
@@ -120,7 +120,7 @@ def transform_to_fill_model(page_text: str, word_tokens: List, words_to_remove: 
         })
 
     return {
-        "gameId": random.randint(1000, 9999),
+        "gameId": game_id,
         "riddle": {
             "prompt": {"parts": parts},
             "options": options

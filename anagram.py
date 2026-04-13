@@ -4,13 +4,12 @@ import spacy
 from word_token import Word_Token
 from typing import List, Tuple, Dict, Any
 import sys
-import uuid
 
 '''This module handles anagram type riddles
 Running as main results in the text of the riddle being printed in the console
 Pass extract path (relative) as argument'''
 FILE_PATH = "extracts/book_2/chapter_1.txt"
-MIN_WORDS = 4
+MIN_WORDS = 2
 MAX_WORDS = 4
 
 # this can be uncommented for visuals but would need to be commented again for code to run as app
@@ -25,7 +24,9 @@ def get_anagram(word: str) -> str:
     ''' this function shuffles a word until an anagram is made'''
     if len(word) <= 1:
         return word
-    
+    upper = word[0].isupper()
+    capslock = word[1].isupper()
+
     original_letters = list(word)
     shuffled_letters = original_letters[:]
     anagram = word
@@ -38,7 +39,13 @@ def get_anagram(word: str) -> str:
         anagram = "".join(shuffled_letters)
         attempts += 1
     
-    return anagram.lower()
+    new_word = anagram.lower()
+    if upper:
+        new_word = anagram.capitalize()
+    if capslock:
+        new_word = anagram.upper()
+
+    return new_word
 
 def generate_riddle(page: str):
     ''' generates a single page of anagram riddle'''

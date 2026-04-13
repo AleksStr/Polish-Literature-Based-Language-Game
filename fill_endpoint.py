@@ -100,7 +100,7 @@ async def start_fill_gaps_game(request: GameRequest, background_tasks: Backgroun
 
             
             
-            game_data = transform_to_fill_model(page_content, word_tokens, words_to_remove)
+            game_data = transform_to_fill_model(page_content, word_tokens, words_to_remove, game_id)
             
 
             current_page_gaps = []
